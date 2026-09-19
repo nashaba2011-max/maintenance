@@ -229,8 +229,12 @@ document.getElementById("enterBtn").addEventListener("click", async ()=>{
   staffName = name;
   document.getElementById("loginCard").style.display = "none";
   document.getElementById("mainArea").style.display = "block";
-  await loadBranches();
-  await loadTickets();
+  try{
+    await loadBranches();
+    await loadTickets();
+  }catch(e){
+    document.getElementById("ticketList").innerHTML = `<div class="empty">${t("loadFail")}</div>`;
+  }
 });
 
 async function loadBranches(){
