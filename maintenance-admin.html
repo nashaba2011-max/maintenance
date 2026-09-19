@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة إدارة الصيانة</title>
+<style>
+  :root{
+    --bg:#F5F2EC; --surface:#FFFFFF; --ink:#211E1A; --muted:#7A7268; --line:#E4DFD5;
+    --primary:#2C4A3E; --primary-ink:#FFFFFF;
+    --urgent:#B0432A; --warn:#C68A2E; --closed:#7C8A80;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+  .wrap{max-width:1100px; margin:0 auto; padding:24px 18px 60px;}
+  header{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;}
+  header h1{font-size:21px; margin:0; font-weight:700;}
+  header .brand{font-size:13px; color:var(--muted);}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:18px;}
+  .stat{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px;}
+  .stat .num{font-size:26px; font-weight:800; line-height:1;}
+  .stat .lbl{font-size:12px; color:var(--muted); margin-top:6px;}
+  .stat.urgent .num{color:var(--urgent);}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:16px;}
+  .filters{display:flex; gap:10px; flex-wrap:wrap;}
+  .filters > div{flex:1; min-width:140px;}
+  label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px;}
+  select, input{width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; font-size:14px; background:#FCFBF9; color:var(--ink); font-family:inherit;}
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th{text-align:right; font-size:11.5px; color:var(--muted); font-weight:600; padding:8px 10px; border-bottom:1px solid var(--line);}
+  td{padding:10px 10px; border-bottom:1px solid var(--line); vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .status-pill{font-size:11px; padding:3px 9px; border-radius:100px; font-weight:700; white-space:nowrap;}
+  .status-open{background:#F6E4DE; color:var(--urgent);}
+  .status-in_progress{background:#F7EBD7; color:#8A5F14;}
+  .status-closed{background:#EAEBE8; color:var(--closed);}
+  .priority-tag{font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px;}
+  .priority-urgent{color:var(--urgent); background:#F6E4DE;}
+  .priority-normal{color:var(--ink); background:#EEECE6;}
+  .priority-low{color:var(--muted); background:#EEECE6;}
+  .empty{color:var(--muted); text-align:center; padding:40px 0;}
+  .table-wrap{overflow-x:auto;}
+  .section-title{font-size:15px; font-weight:700; margin:0 0 12px;}
+  .breakdown{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;}
+  .breakdown span{font-size:12px; background:#EEECE6; padding:4px 10px; border-radius:100px; color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>لوحة إدارة الصيانة</h1>
+    <span class="brand">فريق بن عقول / جست بنز</span>
+  </header>
+
+  <div class="stats" id="statsRow"></div>
+
+  <div class="card">
+    <div class="section-title">حسب الفرع (مفتوح + قيد التنفيذ)</div>
+    <div class="breakdown" id="branchBreakdown"></div>
+  </div>
+
+  <div class="card">
+    <div class="filters">
+      <div>
+        <label>الحالة</label>
+        <select id="statusFilter">
+          <option value="">الكل</option>
+          <option value="open">مفتوح</option>
+          <option value="in_progress">قيد التنفيذ</option>
+          <option value="closed">مقفل</option>
+        </select>
+      </div>
+      <div>
+        <label>الفرع</label>
+        <select id="branchFilter"><option value="">كل الفروع</option></select>
+      </div>
+      <div>
+        <label>التصنيف</label>
+        <select id="catFilter"><option value="">كل التصنيفات</option></select>
+      </div>
+      <div>
+        <label>الأولوية</label>
+        <select id="priorityFilter">
+          <option value="">كل الأولويات</option>
+          <option value="urgent">عاجل</option>
+          <option value="normal">عادي</option>
+          <option value="low">غير عاجل</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card table-wrap">
+    <div id="tableArea"><div class="empty">جارِ التحميل...</div></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://lzadmbjhcxqvafykntsp.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6YWRtYmpoY3hxdmFmeWtudHNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NjQwOTYsImV4cCI6MjEwNTA0MDA5Nn0.HNGwF8_lHrUHU_Xhx9Ymn0eoLHGaJ2GVd69umNNkXCI";
+
+async function sb(path){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+  });
+  if(!res.ok){ throw new Error(await res.text()); }
+  return res.json();
+}
+
+const STATUS_LABEL = {open:"مفتوح", in_progress:"قيد التنفيذ", closed:"مقفل"};
+const PRIORITY_LABEL = {urgent:"عاجل", normal:"عادي", low:"غير عاجل"};
+let allTickets = [];
+let branches = [];
+let categories = [];
+
+function escapeHtml(s){
+  const d = document.createElement("div");
+  d.textContent = s || "";
+  return d.innerHTML;
+}
+
+async function init(){
+  branches = await sb("branches?select=id,name&order=name.asc");
+  categories = await sb("maintenance_categories?select=id,name&order=name.asc");
+  const bSel = document.getElementById("branchFilter");
+  branches.forEach(b=>{
+    const o = document.createElement("option"); o.value=b.id; o.textContent=b.name; bSel.appendChild(o);
+  });
+  const cSel = document.getElementById("catFilter");
+  categories.forEach(c=>{
+    const o = document.createElement("option"); o.value=c.id; o.textContent=c.name; cSel.appendChild(o);
+  });
+
+  allTickets = await sb("maintenance_tickets?select=*,branches(name),maintenance_categories(name),maintenance_staff(name)&order=created_at.desc");
+  renderStats();
+  renderBranchBreakdown();
+  renderTable();
+
+  ["statusFilter","branchFilter","catFilter","priorityFilter"].forEach(id=>{
+    document.getElementById(id).addEventListener("change", renderTable);
+  });
+}
+
+function renderStats(){
+  const open = allTickets.filter(t=>t.status==="open").length;
+  const inProgress = allTickets.filter(t=>t.status==="in_progress").length;
+  const urgent = allTickets.filter(t=>t.status!=="closed" && t.priority==="urgent").length;
+  const closedTickets = allTickets.filter(t=>t.status==="closed" && t.closed_at);
+  let avgHours = "—";
+  if(closedTickets.length){
+    const totalMs = closedTickets.reduce((sum,t)=> sum + (new Date(t.closed_at)-new Date(t.created_at)), 0);
+    avgHours = Math.round(totalMs / closedTickets.length / 3600000) + " ساعة";
+  }
+  const row = document.getElementById("statsRow");
+  row.innerHTML = `
+    <div class="stat"><div class="num">${open}</div><div class="lbl">بلاغات مفتوحة</div></div>
+    <div class="stat"><div class="num">${inProgress}</div><div class="lbl">قيد التنفيذ</div></div>
+    <div class="stat urgent"><div class="num">${urgent}</div><div class="lbl">عاجلة غير مقفلة</div></div>
+    <div class="stat"><div class="num">${allTickets.length}</div><div class="lbl">إجمالي البلاغات</div></div>
+    <div class="stat"><div class="num">${avgHours}</div><div class="lbl">متوسط وقت الإغلاق</div></div>
+  `;
+}
+
+function renderBranchBreakdown(){
+  const el = document.getElementById("branchBreakdown");
+  const counts = {};
+  allTickets.filter(t=>t.status!=="closed").forEach(t=>{
+    const name = t.branches?.name || "—";
+    counts[name] = (counts[name]||0) + 1;
+  });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  if(entries.length === 0){
+    el.innerHTML = '<span>لا توجد بلاغات مفتوحة حالياً</span>';
+    return;
+  }
+  el.innerHTML = entries.map(([name,count])=>`<span>${escapeHtml(name)}: ${count}</span>`).join("");
+}
+
+function renderTable(){
+  const status = document.getElementById("statusFilter").value;
+  const branchId = document.getElementById("branchFilter").value;
+  const catId = document.getElementById("catFilter").value;
+  const priority = document.getElementById("priorityFilter").value;
+
+  let rows = allTickets;
+  if(status) rows = rows.filter(t=>t.status===status);
+  if(branchId) rows = rows.filter(t=>t.branch_id===branchId);
+  if(catId) rows = rows.filter(t=>t.category_id===catId);
+  if(priority) rows = rows.filter(t=>t.priority===priority);
+
+  const area = document.getElementById("tableArea");
+  if(rows.length === 0){
+    area.innerHTML = '<div class="empty">لا توجد بلاغات مطابقة.</div>';
+    return;
+  }
+
+  area.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>الفرع</th><th>التصنيف</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>الفني</th><th>تاريخ البلاغ</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(t=>`
+          <tr>
+            <td>${escapeHtml(t.branches?.name || "—")}</td>
+            <td>${escapeHtml(t.maintenance_categories?.name || "—")}</td>
+            <td style="max-width:260px;">${escapeHtml(t.description)}</td>
+            <td><span class="priority-tag priority-${t.priority}">${PRIORITY_LABEL[t.priority]}</span></td>
+            <td><span class="status-pill status-${t.status}">${STATUS_LABEL[t.status]}</span></td>
+            <td>${escapeHtml(t.maintenance_staff?.name || "—")}</td>
+            <td>${new Date(t.created_at).toLocaleString("ar-BH", {dateStyle:"short", timeStyle:"short"})}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+init();
+</script>
+</body>
+</html>
