@@ -41,6 +41,10 @@
   .priority-low{color:var(--muted); background:#EEECE6;}
   .empty{color:var(--muted); text-align:center; padding:40px 0;}
   .table-wrap{overflow-x:auto;}
+  .mediaCell{display:flex; gap:4px; flex-wrap:wrap;}
+  .mediaThumbSm{position:relative; width:36px; height:36px; border-radius:6px; overflow:hidden; border:1px solid var(--line); display:block; flex-shrink:0;}
+  .mediaThumbSm img, .mediaThumbSm video{width:100%; height:100%; object-fit:cover; display:block;}
+  .mediaThumbSm .playBadgeSm{position:absolute; bottom:0; inset-inline-end:0; background:rgba(33,30,26,.75); color:#fff; font-size:8px; padding:0 2px; border-radius:3px;}
   .section-title{font-size:15px; font-weight:700; margin:0 0 12px;}
   .breakdown{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;}
   .breakdown span{font-size:12px; background:#EEECE6; padding:4px 10px; border-radius:100px; color:var(--ink);}
@@ -60,7 +64,6 @@
       <h1 data-i18n="title">لوحة إدارة الصيانة</h1>
       <span class="brand">Fareeq Bin Aqool / Just Buns</span>
     </div>
-    <button type="button" id="langToggle">عربي</button>
   </header>
 
   <div id="loginCard" class="card login-card">
@@ -170,7 +173,7 @@ const I18N = {
     hrs:"ساعة", noOpenTickets:"لا توجد بلاغات مفتوحة حالياً", noMatchingTickets:"لا توجد بلاغات مطابقة.",
     colBranch:"الفرع", colCategory:"التصنيف", colDesc:"الوصف", colPriority:"الأولوية", colStatus:"الحالة",
     colTech:"الفني", colReported:"تاريخ البلاغ", colStarted:"بدأ العمل", colFinished:"انتهى العمل",
-    colAuthorized:"الجهة المخوّلة", colPerformed:"الجهة المنفّذة", colApproved:"الموافقة", colCost:"التكلفة",
+    colAuthorized:"الجهة المخوّلة", colPerformed:"الجهة المنفّذة", colApproved:"الموافقة", colCost:"التكلفة", colMedia:"المرفقات",
     delete:"حذف", confirmDelete:"هل أنت متأكد من حذف هذا البلاغ نهائياً؟ لا يمكن التراجع.",
     dash:"—", enterAtLeastOne:"اكتب كلمة مرور واحدة على الأقل للتغيير.", saving:"جارِ الحفظ...",
     passwordsSaved:"تم حفظ كلمات المرور الجديدة.", saveFail:"تعذر الحفظ. حاول مرة أخرى.",
@@ -196,7 +199,7 @@ const I18N = {
     hrs:"hrs", noOpenTickets:"No open tickets right now", noMatchingTickets:"No matching tickets.",
     colBranch:"Branch", colCategory:"Category", colDesc:"Description", colPriority:"Priority", colStatus:"Status",
     colTech:"Technician", colReported:"Reported", colStarted:"Started", colFinished:"Finished",
-    colAuthorized:"Authorized By", colPerformed:"Performed By", colApproved:"Approved By", colCost:"Cost",
+    colAuthorized:"Authorized By", colPerformed:"Performed By", colApproved:"Approved By", colCost:"Cost", colMedia:"Media",
     delete:"Delete", confirmDelete:"Are you sure you want to permanently delete this ticket? This cannot be undone.",
     dash:"—", enterAtLeastOne:"Enter at least one new password.", saving:"Saving...",
     passwordsSaved:"Passwords updated successfully.", saveFail:"Could not save. Please try again.",
@@ -219,20 +222,7 @@ function applyStaticLanguage(){
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
     el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
   });
-  document.getElementById("langToggle").textContent = t("langBtn");
 }
-
-document.getElementById("langToggle").addEventListener("click", ()=>{
-  lang = lang === "ar" ? "en" : "ar";
-  applyStaticLanguage();
-  if(document.getElementById("mainArea").classList.contains("hidden")) return;
-  renderCatOptions();
-  renderStats();
-  renderBranchBreakdown();
-  renderTable();
-  renderBranchPassList();
-  renderBranchWaList();
-});
 
 async function sb(path, opts={}){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -253,7 +243,7 @@ async function sb(path, opts={}){
 let allTickets = [];
 let branches = [];
 let categories = [];
-let mediaCounts = {};
+let mediaByTicket = {};
 
 function escapeHtml(s){
   const d = document.createElement("div");
@@ -318,9 +308,12 @@ async function init(){
   document.getElementById("teamWaNumbers").value = (settingsRows[0]?.team_whatsapp_numbers || "").replace(/,/g, "\n");
 
   allTickets = await sb("maintenance_tickets?select=*,branches(name),maintenance_categories(name,name_en),maintenance_staff(name)&order=created_at.desc");
-  const photoRows = await sb("ticket_photos?select=ticket_id");
-  mediaCounts = {};
-  photoRows.forEach(p=>{ mediaCounts[p.ticket_id] = (mediaCounts[p.ticket_id]||0) + 1; });
+  const photoRows = await sb("ticket_photos?select=ticket_id,url&order=created_at.asc");
+  mediaByTicket = {};
+  photoRows.forEach(p=>{
+    if(!mediaByTicket[p.ticket_id]) mediaByTicket[p.ticket_id] = [];
+    mediaByTicket[p.ticket_id].push(p.url);
+  });
   renderStats();
   renderBranchBreakdown();
   renderTable();
@@ -367,6 +360,16 @@ function renderBranchBreakdown(){
   el.innerHTML = entries.map(([name,count])=>`<span>${escapeHtml(name)}: ${count}</span>`).join("");
 }
 
+function renderMediaCell(urls){
+  if(!urls || urls.length === 0) return t("dash");
+  return `<div class="mediaCell">` + urls.map(url=>{
+    const isVideo = /\.(mp4|mov|webm|m4v|avi)$/i.test(url);
+    return isVideo
+      ? `<a href="${url}" target="_blank" class="mediaThumbSm"><video src="${url}" muted onerror="this.closest('a').style.display='none'"></video><span class="playBadgeSm">▶</span></a>`
+      : `<a href="${url}" target="_blank" class="mediaThumbSm"><img src="${url}" onerror="this.closest('a').style.display='none'"></a>`;
+  }).join("") + `</div>`;
+}
+
 function renderTable(){
   const status = document.getElementById("statusFilter").value;
   const branchId = document.getElementById("branchFilter").value;
@@ -389,14 +392,15 @@ function renderTable(){
   area.innerHTML = `
     <table>
       <thead><tr>
-        <th>${t("colBranch")}</th><th>${t("colCategory")}</th><th>${t("colDesc")}</th><th>${t("colPriority")}</th><th>${t("colStatus")}</th><th>${t("colTech")}</th><th>${t("colReported")}</th><th>${t("colStarted")}</th><th>${t("colFinished")}</th><th>${t("colAuthorized")}</th><th>${t("colPerformed")}</th><th>${t("colApproved")}</th><th>${t("colCost")}</th><th></th>
+        <th>${t("colBranch")}</th><th>${t("colCategory")}</th><th>${t("colDesc")}</th><th>${t("colMedia")}</th><th>${t("colPriority")}</th><th>${t("colStatus")}</th><th>${t("colTech")}</th><th>${t("colReported")}</th><th>${t("colStarted")}</th><th>${t("colFinished")}</th><th>${t("colAuthorized")}</th><th>${t("colPerformed")}</th><th>${t("colApproved")}</th><th>${t("colCost")}</th><th></th>
       </tr></thead>
       <tbody>
         ${rows.map(tk=>`
           <tr>
             <td>${escapeHtml(tk.branches?.name || t("dash"))}</td>
             <td>${escapeHtml((lang==="en" ? (tk.maintenance_categories?.name_en || tk.maintenance_categories?.name) : tk.maintenance_categories?.name) || t("dash"))}</td>
-            <td style="max-width:260px;">${escapeHtml(tk.description)}${mediaCounts[tk.id] ? ` <span style="color:var(--muted); font-size:11px;">📎${mediaCounts[tk.id]}</span>` : ""}</td>
+            <td style="max-width:220px;">${escapeHtml(tk.description)}</td>
+            <td>${renderMediaCell(mediaByTicket[tk.id])}</td>
             <td><span class="priority-tag priority-${tk.priority}">${t(tk.priority)}</span></td>
             <td><span class="status-pill status-${tk.status}">${t(tk.status)}</span></td>
             <td>${escapeHtml(tk.maintenance_staff?.name || t("dash"))}</td>
