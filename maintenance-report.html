@@ -149,10 +149,10 @@ const I18N = {
     enterNewPassword:"اكتب كلمة مرور جديدة.", saving:"جارِ الحفظ...", passwordChanged:"تم تغيير كلمة المرور بنجاح.",
     saveFail:"تعذر الحفظ. حاول مرة أخرى.", selectCategoryFirst:"الرجاء اختيار نوع المشكلة.",
     writeDescription:"الرجاء كتابة وصف للمشكلة.", submitting:"جارِ الإرسال...",
-    uploadingAttachments:"جارِ رفع المرفقات", reportSuccess:"تم إرسال البلاغ بنجاح.",
+    uploadingAttachments:"جارِ رفع المرفقات", reportSuccess:"تم إرسال البلاغ بنجاح.", ticketNumberLabel:"رقم التذكرة: #",
     reportFail:"تعذر إرسال البلاغ. حاول مرة أخرى.", sendWhatsappAlert:"أرسل تنبيه فوري لفريق الصيانة عبر واتساب:",
-    sendViaWhatsapp:"إرسال عبر واتساب", forgotWhatsappMsg:(b)=>`مرحباً، نسيت كلمة مرور فرع ${b} في نظام بلاغ الصيانة. ممكن ترسلها لي؟`,
-    newTicketMsg:(branch,cat,pri,desc)=>`بلاغ صيانة جديد\nالفرع: ${branch}\nنوع المشكلة: ${cat}\nالأولوية: ${pri}\nالوصف: ${desc}`,
+    sendViaWhatsapp:"إرسال عبر واتساب", recipient:"المستلم", forgotWhatsappMsg:(b)=>`مرحباً، نسيت كلمة مرور فرع ${b} في نظام بلاغ الصيانة. ممكن ترسلها لي؟`,
+    newTicketMsg:(num,branch,cat,pri,desc)=>`بلاغ صيانة جديد #${num}\nالفرع: ${branch}\nنوع المشكلة: ${cat}\nالأولوية: ${pri}\nالوصف: ${desc}`,
     langBtn:"English"
   },
   en: {
@@ -172,10 +172,10 @@ const I18N = {
     enterNewPassword:"Enter a new password.", saving:"Saving...", passwordChanged:"Password changed successfully.",
     saveFail:"Could not save. Please try again.", selectCategoryFirst:"Please select a problem type.",
     writeDescription:"Please write a description.", submitting:"Submitting...",
-    uploadingAttachments:"Uploading attachments", reportSuccess:"Report submitted successfully.",
+    uploadingAttachments:"Uploading attachments", reportSuccess:"Report submitted successfully.", ticketNumberLabel:"Ticket #",
     reportFail:"Could not submit report. Please try again.", sendWhatsappAlert:"Send an instant WhatsApp alert to the maintenance team:",
-    sendViaWhatsapp:"Send via WhatsApp", forgotWhatsappMsg:(b)=>`Hi, I forgot the password for the ${b} branch in the maintenance report system. Could you send it to me?`,
-    newTicketMsg:(branch,cat,pri,desc)=>`New maintenance ticket\nBranch: ${branch}\nProblem type: ${cat}\nPriority: ${pri}\nDescription: ${desc}`,
+    sendViaWhatsapp:"Send via WhatsApp", recipient:"Recipient", forgotWhatsappMsg:(b)=>`Hi, I forgot the password for the ${b} branch in the maintenance report system. Could you send it to me?`,
+    newTicketMsg:(num,branch,cat,pri,desc)=>`New maintenance ticket #${num}\nBranch: ${branch}\nProblem type: ${cat}\nPriority: ${pri}\nDescription: ${desc}`,
     langBtn:"عربي"
   }
 };
@@ -474,20 +474,30 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
     }
 
     msgEl.className = "msg ok";
-    msgEl.textContent = t("reportSuccess");
+    msgEl.textContent = `${t("reportSuccess")} ${t("ticketNumberLabel")}${ticket.ticket_number}`;
 
     try{
       const settingsRows = await sb("admin_settings?select=team_whatsapp_numbers&limit=1");
       const numbers = (settingsRows[0]?.team_whatsapp_numbers || "").split(",").map(s=>s.trim()).filter(Boolean);
       if(numbers.length){
         const priorityLabel = t(priority);
-        const waText = encodeURIComponent(t("newTicketMsg")(currentBranch.name, catName, priorityLabel, desc));
+        const waText = encodeURIComponent(t("newTicketMsg")(ticket.ticket_number, currentBranch.name, catName, priorityLabel, desc));
         const box = document.getElementById("waNotifyBox");
-        box.innerHTML = `<div style="font-size:12.5px; color:var(--muted); margin-top:14px; margin-bottom:6px;">${t("sendWhatsappAlert")}</div>` +
-          numbers.map((num, idx)=>`<button type="button" class="waSendBtn" data-num="${num}" style="margin-top:6px; background:#25D366;">${t("sendViaWhatsapp")}${numbers.length>1 ? " ("+(idx+1)+")" : ""}</button>`).join("");
+        if(numbers.length === 1){
+          box.innerHTML = `<div style="font-size:12.5px; color:var(--muted); margin-top:14px; margin-bottom:6px;">${t("sendWhatsappAlert")}</div>` +
+            `<button type="button" class="waSendBtn" data-num="${numbers[0]}" style="margin-top:6px; background:#25D366;">${t("sendViaWhatsapp")}</button>`;
+        }else{
+          box.innerHTML = `<div style="font-size:12.5px; color:var(--muted); margin-top:14px; margin-bottom:6px;">${t("sendWhatsappAlert")}</div>` +
+            `<select id="waNumberSelect" style="margin-bottom:8px;">` +
+            numbers.map((num,idx)=>`<option value="${num}">${t("recipient")} ${idx+1} (${num})</option>`).join("") +
+            `</select>` +
+            `<button type="button" class="waSendBtn" style="background:#25D366;">${t("sendViaWhatsapp")}</button>`;
+        }
         box.querySelectorAll(".waSendBtn").forEach(b=>{
           b.addEventListener("click", ()=>{
-            window.open(`https://wa.me/${b.dataset.num}?text=${waText}`, "_blank");
+            const sel = document.getElementById("waNumberSelect");
+            const num = b.dataset.num || (sel ? sel.value : numbers[0]);
+            window.open(`https://wa.me/${num}?text=${waText}`, "_blank");
           });
         });
       }

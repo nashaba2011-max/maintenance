@@ -294,7 +294,7 @@ async function renderTicket(tk){
   const catName = lang === "en" ? (tk.maintenance_categories?.name_en || tk.maintenance_categories?.name) : tk.maintenance_categories?.name;
   div.innerHTML = `
     <div class="ticket-top">
-      <span class="branch-name">${tk.branches?.name || t("dash")}</span>
+      <span class="branch-name">#${tk.ticket_number} · ${tk.branches?.name || t("dash")}</span>
       <span class="status-pill status-${tk.status}">${t(tk.status)}</span>
     </div>
     <div class="ticket-meta">
