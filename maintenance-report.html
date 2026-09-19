@@ -59,6 +59,9 @@
   .branch-tag{display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--muted); margin-bottom:6px;}
   .branch-tag b{color:var(--ink); font-size:15px;}
   .branch-tag a{color:var(--primary); font-size:12.5px; text-decoration:none; font-weight:600;}
+  .waCheckList{margin-bottom:10px;}
+  .waCheckRow{display:flex; align-items:center; gap:8px; padding:6px 0; cursor:pointer; font-size:13.5px; color:var(--ink);}
+  .waCheckRow input{width:auto;}
 </style>
 </head>
 <body>
@@ -486,20 +489,27 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
         if(numbers.length === 1){
           box.innerHTML = `<div style="font-size:12.5px; color:var(--muted); margin-top:14px; margin-bottom:6px;">${t("sendWhatsappAlert")}</div>` +
             `<button type="button" class="waSendBtn" data-num="${numbers[0]}" style="margin-top:6px; background:#25D366;">${t("sendViaWhatsapp")}</button>`;
+          box.querySelector(".waSendBtn").addEventListener("click", ()=>{
+            window.open(`https://wa.me/${numbers[0]}?text=${waText}`, "_blank");
+          });
         }else{
           box.innerHTML = `<div style="font-size:12.5px; color:var(--muted); margin-top:14px; margin-bottom:6px;">${t("sendWhatsappAlert")}</div>` +
-            `<select id="waNumberSelect" style="margin-bottom:8px;">` +
-            numbers.map((num,idx)=>`<option value="${num}">${t("recipient")} ${idx+1} (${num})</option>`).join("") +
-            `</select>` +
-            `<button type="button" class="waSendBtn" style="background:#25D366;">${t("sendViaWhatsapp")}</button>`;
-        }
-        box.querySelectorAll(".waSendBtn").forEach(b=>{
-          b.addEventListener("click", ()=>{
-            const sel = document.getElementById("waNumberSelect");
-            const num = b.dataset.num || (sel ? sel.value : numbers[0]);
-            window.open(`https://wa.me/${num}?text=${waText}`, "_blank");
+            `<div class="waCheckList">` +
+            numbers.map((num,idx)=>`
+              <label class="waCheckRow">
+                <input type="checkbox" class="waNumCheck" value="${num}" checked>
+                <span>${t("recipient")} ${idx+1} (${num})</span>
+              </label>
+            `).join("") +
+            `</div>` +
+            `<button type="button" id="waSendSelectedBtn" style="background:#25D366;">${t("sendViaWhatsapp")}</button>`;
+          document.getElementById("waSendSelectedBtn").addEventListener("click", ()=>{
+            const selected = Array.from(box.querySelectorAll(".waNumCheck:checked")).map(c=>c.value);
+            selected.forEach(num=>{
+              window.open(`https://wa.me/${num}?text=${waText}`, "_blank");
+            });
           });
-        });
+        }
       }
     }catch(e){}
 
