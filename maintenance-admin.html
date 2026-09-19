@@ -171,6 +171,7 @@ const I18N = {
     colBranch:"الفرع", colCategory:"التصنيف", colDesc:"الوصف", colPriority:"الأولوية", colStatus:"الحالة",
     colTech:"الفني", colReported:"تاريخ البلاغ", colStarted:"بدأ العمل", colFinished:"انتهى العمل",
     colAuthorized:"الجهة المخوّلة", colPerformed:"الجهة المنفّذة", colApproved:"الموافقة", colCost:"التكلفة",
+    delete:"حذف", confirmDelete:"هل أنت متأكد من حذف هذا البلاغ نهائياً؟ لا يمكن التراجع.",
     dash:"—", enterAtLeastOne:"اكتب كلمة مرور واحدة على الأقل للتغيير.", saving:"جارِ الحفظ...",
     passwordsSaved:"تم حفظ كلمات المرور الجديدة.", saveFail:"تعذر الحفظ. حاول مرة أخرى.",
     branchPassSaved:"تم حفظ كلمات مرور الفروع.", waSaved:"تم حفظ أرقام واتساب الفروع.",
@@ -196,6 +197,7 @@ const I18N = {
     colBranch:"Branch", colCategory:"Category", colDesc:"Description", colPriority:"Priority", colStatus:"Status",
     colTech:"Technician", colReported:"Reported", colStarted:"Started", colFinished:"Finished",
     colAuthorized:"Authorized By", colPerformed:"Performed By", colApproved:"Approved By", colCost:"Cost",
+    delete:"Delete", confirmDelete:"Are you sure you want to permanently delete this ticket? This cannot be undone.",
     dash:"—", enterAtLeastOne:"Enter at least one new password.", saving:"Saving...",
     passwordsSaved:"Passwords updated successfully.", saveFail:"Could not save. Please try again.",
     branchPassSaved:"Branch passwords saved.", waSaved:"WhatsApp numbers saved.",
@@ -387,7 +389,7 @@ function renderTable(){
   area.innerHTML = `
     <table>
       <thead><tr>
-        <th>${t("colBranch")}</th><th>${t("colCategory")}</th><th>${t("colDesc")}</th><th>${t("colPriority")}</th><th>${t("colStatus")}</th><th>${t("colTech")}</th><th>${t("colReported")}</th><th>${t("colStarted")}</th><th>${t("colFinished")}</th><th>${t("colAuthorized")}</th><th>${t("colPerformed")}</th><th>${t("colApproved")}</th><th>${t("colCost")}</th>
+        <th>${t("colBranch")}</th><th>${t("colCategory")}</th><th>${t("colDesc")}</th><th>${t("colPriority")}</th><th>${t("colStatus")}</th><th>${t("colTech")}</th><th>${t("colReported")}</th><th>${t("colStarted")}</th><th>${t("colFinished")}</th><th>${t("colAuthorized")}</th><th>${t("colPerformed")}</th><th>${t("colApproved")}</th><th>${t("colCost")}</th><th></th>
       </tr></thead>
       <tbody>
         ${rows.map(tk=>`
@@ -405,11 +407,29 @@ function renderTable(){
             <td>${escapeHtml(tk.performed_by || t("dash"))}</td>
             <td>${escapeHtml(tk.approved_by || t("dash"))}</td>
             <td>${tk.cost != null ? tk.cost.toFixed(3) : t("dash")}</td>
+            <td><button type="button" class="deleteTicketBtn" data-id="${tk.id}" style="background:transparent; color:var(--urgent); border:1px solid var(--urgent); padding:5px 10px; font-size:12px; white-space:nowrap;">${t("delete")}</button></td>
           </tr>
         `).join("")}
       </tbody>
     </table>
   `;
+
+  area.querySelectorAll(".deleteTicketBtn").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      if(!confirm(t("confirmDelete"))) return;
+      btn.disabled = true; btn.textContent = "...";
+      try{
+        await sb(`maintenance_tickets?id=eq.${btn.dataset.id}`, { method:"DELETE" });
+        allTickets = allTickets.filter(x=>x.id !== btn.dataset.id);
+        renderStats();
+        renderBranchBreakdown();
+        renderTable();
+      }catch(e){
+        alert(t("saveFail"));
+        btn.disabled = false; btn.textContent = t("delete");
+      }
+    });
+  });
 }
 
 function renderBranchPassList(){
