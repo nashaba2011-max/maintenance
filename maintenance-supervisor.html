@@ -79,7 +79,6 @@
       <h1 data-i18n="title">مسؤول الصيانة</h1>
       <span class="brand">Fareeq Bin Aqool / Just Buns</span>
     </div>
-    <button type="button" id="langToggle">عربي</button>
   </header>
 
   <div id="loginCard" class="card">
@@ -192,17 +191,11 @@ function applyLanguage(){
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
     el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
   });
-  document.getElementById("langToggle").textContent = t("langBtn");
   if(document.getElementById("mainArea").style.display === "block"){
     loadTickets();
     loadReportStats();
   }
 }
-
-document.getElementById("langToggle").addEventListener("click", ()=>{
-  lang = lang === "ar" ? "en" : "ar";
-  applyLanguage();
-});
 
 async function sb(path, opts={}){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -493,8 +486,8 @@ async function loadMedia(ticketId, el){
     el.innerHTML = photos.map(p=>{
       const isVideo = /\.(mp4|mov|webm|m4v|avi)$/i.test(p.url);
       return isVideo
-        ? `<a href="${p.url}" target="_blank" class="mediaThumb"><video src="${p.url}" muted></video><span class="playBadge">▶</span></a>`
-        : `<a href="${p.url}" target="_blank" class="mediaThumb"><img src="${p.url}"></a>`;
+        ? `<a href="${p.url}" target="_blank" class="mediaThumb"><video src="${p.url}" muted onerror="this.closest('a').style.display='none'"></video><span class="playBadge">▶</span></a>`
+        : `<a href="${p.url}" target="_blank" class="mediaThumb"><img src="${p.url}" onerror="this.closest('a').style.display='none'"></a>`;
     }).join("");
   }catch(e){}
 }

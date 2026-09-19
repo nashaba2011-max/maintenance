@@ -69,8 +69,7 @@
       <span class="brand">Fareeq Bin Aqool / Just Buns</span>
     </div>
     <div class="headerRight">
-      <button type="button" id="langToggle">عربي</button>
-    </div>
+      </div>
   </header>
 
   <!-- Step 1: choose branch -->
@@ -208,14 +207,8 @@ function applyLanguage(){
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
     el.placeholder = I18N[lang][el.getAttribute("data-i18n-placeholder")];
   });
-  document.getElementById("langToggle").textContent = t("langBtn");
   renderCategoryOptions();
 }
-
-document.getElementById("langToggle").addEventListener("click", ()=>{
-  lang = lang === "ar" ? "en" : "ar";
-  applyLanguage();
-});
 
 async function sb(path, opts={}){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -408,6 +401,39 @@ function escapeSlug(s){
   return s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
 }
 
+function buildFileName(originalName, isVideo){
+  const dotIdx = originalName.lastIndexOf(".");
+  const ext = isVideo
+    ? (dotIdx > 0 ? originalName.slice(dotIdx+1).toLowerCase().replace(/[^a-z0-9]/g,"") || "mp4" : "mp4")
+    : "jpg";
+  const base = dotIdx > 0 ? originalName.slice(0, dotIdx) : originalName;
+  return `${escapeSlug(base) || "file"}.${ext}`;
+}
+
+function compressImage(file, maxDim, quality){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = ()=>{
+      let { width, height } = img;
+      if(width > maxDim || height > maxDim){
+        if(width > height){ height = Math.round(height * (maxDim / width)); width = maxDim; }
+        else{ width = Math.round(width * (maxDim / height)); height = maxDim; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(objectUrl);
+      canvas.toBlob((blob)=>{
+        resolve(blob ? blob : file);
+      }, "image/jpeg", quality);
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(objectUrl); resolve(file); };
+    img.src = objectUrl;
+  });
+}
+
 document.getElementById("submitBtn").addEventListener("click", async ()=>{
   const catSelect = document.getElementById("catSelect");
   const catId = catSelect.value;
@@ -441,8 +467,11 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
       btn.textContent = `${t("uploadingAttachments")} (0/${selectedFiles.length})...`;
       for(let i=0; i<selectedFiles.length; i++){
         const file = selectedFiles[i];
-        const path = `${ticket.id}/${Date.now()}-${i}-${escapeSlug(file.name)}`;
-        const url = await uploadPhoto(path, file);
+        const isVideo = file.type.startsWith("video/");
+        const uploadBlob = isVideo ? file : await compressImage(file, 1600, 0.75);
+        const fileName = buildFileName(file.name, isVideo);
+        const path = `${ticket.id}/${Date.now()}-${i}-${fileName}`;
+        const url = await uploadPhoto(path, uploadBlob);
         await sb("ticket_photos", { method:"POST", body: JSON.stringify({ ticket_id: ticket.id, url }) });
         btn.textContent = `${t("uploadingAttachments")} (${i+1}/${selectedFiles.length})...`;
       }
