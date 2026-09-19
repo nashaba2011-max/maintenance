@@ -34,6 +34,10 @@
   .priority-normal{color:var(--ink); background:#EEECE6;}
   .priority-low{color:var(--muted); background:#EEECE6;}
   .ticket-desc{font-size:14px; margin:8px 0; line-height:1.5;}
+  .mediaGallery{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
+  .mediaThumb{position:relative; width:64px; height:64px; border-radius:8px; overflow:hidden; border:1px solid var(--line); display:block;}
+  .mediaThumb img, .mediaThumb video{width:100%; height:100%; object-fit:cover; display:block;}
+  .mediaThumb .playBadge{position:absolute; bottom:2px; right:2px; background:rgba(33,30,26,.75); color:#fff; font-size:10px; padding:1px 4px; border-radius:5px;}
   .ticket-meta{font-size:12px; color:var(--muted); margin-bottom:10px;}
   .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
   .row select, .row button{flex:1; min-width:120px;}
@@ -64,6 +68,7 @@
     <input id="teamPass" type="password" placeholder="Password" style="width:100%; margin-bottom:10px;">
     <button id="enterBtn" style="width:100%;">Enter</button>
     <div id="loginMsg" class="msg err" style="margin-top:8px;"></div>
+    <a href="#" id="forgotPassLink" style="display:block; text-align:center; font-size:12.5px; color:var(--primary); text-decoration:none; margin-top:10px; font-weight:600;">Forgot password?</a>
   </div>
 
   <div id="mainArea" class="hidden" style="display:none;">
@@ -120,6 +125,12 @@ const STATUS_LABEL = {open:"Open", in_progress:"In Progress", closed:"Closed"};
 const PRIORITY_LABEL = {urgent:"Urgent", normal:"Normal", low:"Low"};
 let staffName = "";
 let branches = [];
+
+document.getElementById("forgotPassLink").addEventListener("click", (e)=>{
+  e.preventDefault();
+  const text = encodeURIComponent("Hi, I forgot the maintenance team password. Could you send it to me?");
+  window.open(`https://wa.me/97333787872?text=${text}`, "_blank");
+});
 
 document.getElementById("enterBtn").addEventListener("click", async ()=>{
   const name = document.getElementById("staffName").value.trim();
@@ -208,6 +219,7 @@ async function renderTicket(t){
       ${t.maintenance_categories?.name_en || t.maintenance_categories?.name || "—"} · ${date}${t.reported_by ? " · Reported by: " + escapeHtml(t.reported_by) : ""}
     </div>
     <div class="ticket-desc">${escapeHtml(t.description)}</div>
+    <div class="mediaGallery"></div>
     <div class="row">
       ${t.status !== "closed" ? `
         <select class="statusSelect">
@@ -230,6 +242,9 @@ async function renderTicket(t){
 
   const notesListEl = div.querySelector(".notesList");
   loadNotes(t.id, notesListEl);
+
+  const mediaEl = div.querySelector(".mediaGallery");
+  loadMedia(t.id, mediaEl);
 
   const statusSel = div.querySelector(".statusSelect");
   if(statusSel){
@@ -273,6 +288,19 @@ async function renderTicket(t){
   }
 
   return div;
+}
+
+async function loadMedia(ticketId, el){
+  try{
+    const photos = await sb(`ticket_photos?ticket_id=eq.${ticketId}&select=*&order=created_at.asc`);
+    if(photos.length === 0) return;
+    el.innerHTML = photos.map(p=>{
+      const isVideo = /\.(mp4|mov|webm|m4v|avi)$/i.test(p.url);
+      return isVideo
+        ? `<a href="${p.url}" target="_blank" class="mediaThumb"><video src="${p.url}" muted></video><span class="playBadge">▶</span></a>`
+        : `<a href="${p.url}" target="_blank" class="mediaThumb"><img src="${p.url}"></a>`;
+    }).join("");
+  }catch(e){}
 }
 
 async function loadNotes(ticketId, el){

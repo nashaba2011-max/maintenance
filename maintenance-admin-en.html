@@ -161,6 +161,7 @@ const PRIORITY_LABEL = {urgent:"Urgent", normal:"Normal", low:"Low"};
 let allTickets = [];
 let branches = [];
 let categories = [];
+let mediaCounts = {};
 
 function escapeHtml(s){
   const d = document.createElement("div");
@@ -183,6 +184,9 @@ async function init(){
   renderBranchWaList();
 
   allTickets = await sb("maintenance_tickets?select=*,branches(name),maintenance_categories(name,name_en),maintenance_staff(name)&order=created_at.desc");
+  const photoRows = await sb("ticket_photos?select=ticket_id");
+  mediaCounts = {};
+  photoRows.forEach(p=>{ mediaCounts[p.ticket_id] = (mediaCounts[p.ticket_id]||0) + 1; });
   renderStats();
   renderBranchBreakdown();
   renderTable();
@@ -255,7 +259,7 @@ function renderTable(){
           <tr>
             <td>${escapeHtml(t.branches?.name || "—")}</td>
             <td>${escapeHtml(t.maintenance_categories?.name_en || t.maintenance_categories?.name || "—")}</td>
-            <td style="max-width:260px;">${escapeHtml(t.description)}</td>
+            <td style="max-width:260px;">${escapeHtml(t.description)}${mediaCounts[t.id] ? ` <span style="color:var(--muted); font-size:11px;">📎${mediaCounts[t.id]}</span>` : ""}</td>
             <td><span class="priority-tag priority-${t.priority}">${PRIORITY_LABEL[t.priority]}</span></td>
             <td><span class="status-pill status-${t.status}">${STATUS_LABEL[t.status]}</span></td>
             <td>${escapeHtml(t.maintenance_staff?.name || "—")}</td>

@@ -40,7 +40,7 @@
   #photoInput{display:none;}
   .thumbs{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
   .thumb{position:relative; width:72px; height:72px; border-radius:8px; overflow:hidden; border:1px solid var(--line);}
-  .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .thumb img, .thumb video{width:100%; height:100%; object-fit:cover; display:block;}
   .thumb .rm{
     position:absolute; top:2px; left:2px; background:rgba(33,30,26,.75); color:#fff; border:none;
     border-radius:100px; width:20px; height:20px; font-size:12px; line-height:1; cursor:pointer; padding:0;
@@ -100,9 +100,9 @@
     <label for="reporterName">اسمك</label>
     <input id="reporterName" type="text" placeholder="اسمك (اختياري)">
 
-    <label>صور (اختياري)</label>
-    <div class="photo-drop" id="photoDrop">اضغط هنا لإضافة صور</div>
-    <input id="photoInput" type="file" accept="image/*" multiple>
+    <label>صور أو فيديو (اختياري)</label>
+    <div class="photo-drop" id="photoDrop">اضغط هنا لإضافة صور أو فيديو</div>
+    <input id="photoInput" type="file" accept="image/*,video/*" multiple>
     <div class="thumbs" id="thumbs"></div>
 
     <button id="submitBtn">إرسال البلاغ</button>
@@ -241,15 +241,23 @@ function renderThumbs(){
   selectedFiles.forEach((file, idx)=>{
     const div = document.createElement("div");
     div.className = "thumb";
-    const img = document.createElement("img");
-    img.src = URL.createObjectURL(file);
+    const isVideo = file.type.startsWith("video/");
+    const media = document.createElement(isVideo ? "video" : "img");
+    media.src = URL.createObjectURL(file);
+    if(isVideo) media.muted = true;
     const rm = document.createElement("button");
     rm.className = "rm"; rm.textContent = "×";
     rm.addEventListener("click", ()=>{
       selectedFiles.splice(idx, 1);
       renderThumbs();
     });
-    div.appendChild(img); div.appendChild(rm);
+    div.appendChild(media); div.appendChild(rm);
+    if(isVideo){
+      const badge = document.createElement("span");
+      badge.textContent = "▶";
+      badge.style.cssText = "position:absolute; bottom:2px; right:2px; background:rgba(33,30,26,.75); color:#fff; font-size:11px; padding:1px 5px; border-radius:6px;";
+      div.appendChild(badge);
+    }
     wrap.appendChild(div);
   });
 }
@@ -285,13 +293,13 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
     const ticket = created[0];
 
     if(selectedFiles.length){
-      btn.textContent = `جارِ رفع الصور (0/${selectedFiles.length})...`;
+      btn.textContent = `جارِ رفع المرفقات (0/${selectedFiles.length})...`;
       for(let i=0; i<selectedFiles.length; i++){
         const file = selectedFiles[i];
         const path = `${ticket.id}/${Date.now()}-${i}-${escapeSlug(file.name)}`;
         const url = await uploadPhoto(path, file);
         await sb("ticket_photos", { method:"POST", body: JSON.stringify({ ticket_id: ticket.id, url }) });
-        btn.textContent = `جارِ رفع الصور (${i+1}/${selectedFiles.length})...`;
+        btn.textContent = `جارِ رفع المرفقات (${i+1}/${selectedFiles.length})...`;
       }
     }
 
