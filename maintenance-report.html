@@ -190,12 +190,8 @@ function applyLanguage(){
   document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   document.querySelectorAll("[data-i18n]").forEach(el=>{
     const key = el.getAttribute("data-i18n");
-    if(el.id === "branchNameLbl") return;
-    if(el.tagName === "OPTION" || el.tagName === "SPAN" || el.tagName === "LABEL" || el.tagName === "BUTTON" || el.tagName === "A" || el.tagName === "DIV" || el.tagName === "H1"){
-      if(el.id === "changeBranchLink" || el.tagName === "H1" || el.tagName === "OPTION" || el.tagName === "BUTTON" || el.tagName === "A" || el.tagName === "DIV" || el.tagName === "SPAN"){
-        if(el.childElementCount === 0){ el.textContent = I18N[lang][key]; }
-      }
-    }
+    if(key === "branchLabel") return;
+    if(el.childElementCount === 0){ el.textContent = I18N[lang][key]; }
   });
   // branch label special-case (contains nested <b>)
   const branchLabelSpan = document.querySelector('[data-i18n="branchLabel"]');
@@ -531,6 +527,7 @@ function enableEnterNav(containerId, buttonId){
 enableEnterNav("branchCard", "continueBtn");
 enableEnterNav("reportCard", "submitBtn");
 
+applyLanguage();
 init();
 </script>
 </body>
