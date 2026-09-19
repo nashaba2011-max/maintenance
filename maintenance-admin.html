@@ -48,8 +48,8 @@
   .msg.err{color:var(--urgent);}
   .msg.ok{color:var(--primary);}
   .login-card{max-width:360px; margin:60px auto 0;}
-  #savePassBtn{padding:11px; border:none; border-radius:9px; background:var(--primary); color:var(--primary-ink); font-size:14px; font-weight:700; cursor:pointer;}
-  #savePassBtn:disabled{opacity:.5; cursor:default;}
+  #savePassBtn, #saveBranchPassBtn, #saveBranchWaBtn{padding:11px; border:none; border-radius:9px; background:var(--primary); color:var(--primary-ink); font-size:14px; font-weight:700; cursor:pointer;}
+  #savePassBtn:disabled, #saveBranchPassBtn:disabled, #saveBranchWaBtn:disabled{opacity:.5; cursor:default;}
 </style>
 </head>
 <body>
@@ -64,6 +64,7 @@
     <input id="adminPass" type="password" placeholder="كلمة المرور" style="width:100%; margin-bottom:10px;">
     <button id="enterBtn" style="width:100%; padding:11px; border:none; border-radius:9px; background:var(--primary); color:var(--primary-ink); font-size:14px; font-weight:700; cursor:pointer;">دخول</button>
     <div id="loginMsg" class="msg err"></div>
+    <a href="#" id="forgotPassLink" style="display:block; text-align:center; font-size:12.5px; color:var(--primary); text-decoration:none; margin-top:10px; font-weight:600;">نسيت كلمة المرور؟</a>
   </div>
 
   <div id="mainArea" class="hidden">
@@ -118,6 +119,20 @@
     <button id="savePassBtn" style="width:100%; margin-top:14px;">حفظ</button>
     <div id="passMsg" class="msg"></div>
   </div>
+
+  <div class="card" style="max-width:420px;">
+    <div class="section-title">كلمات مرور الفروع (لصفحة البلاغ)</div>
+    <div id="branchPassList"></div>
+    <button id="saveBranchPassBtn" style="width:100%; margin-top:6px;">حفظ كلمات مرور الفروع</button>
+    <div id="branchPassMsg" class="msg"></div>
+  </div>
+
+  <div class="card" style="max-width:420px;">
+    <div class="section-title">أرقام واتساب مسؤولي الفروع</div>
+    <div id="branchWaList"></div>
+    <button id="saveBranchWaBtn" style="width:100%; margin-top:6px;">حفظ أرقام واتساب الفروع</button>
+    <div id="branchWaMsg" class="msg"></div>
+  </div>
   </div>
 </div>
 
@@ -154,7 +169,7 @@ function escapeHtml(s){
 }
 
 async function init(){
-  branches = await sb("branches?select=id,name&order=name.asc");
+  branches = await sb("branches?select=id,name,maintenance_password,manager_whatsapp&order=name.asc");
   categories = await sb("maintenance_categories?select=id,name&order=name.asc");
   const bSel = document.getElementById("branchFilter");
   branches.forEach(b=>{
@@ -164,6 +179,8 @@ async function init(){
   categories.forEach(c=>{
     const o = document.createElement("option"); o.value=c.id; o.textContent=c.name; cSel.appendChild(o);
   });
+  renderBranchPassList();
+  renderBranchWaList();
 
   allTickets = await sb("maintenance_tickets?select=*,branches(name),maintenance_categories(name),maintenance_staff(name)&order=created_at.desc");
   renderStats();
@@ -250,6 +267,72 @@ function renderTable(){
   `;
 }
 
+function renderBranchPassList(){
+  const el = document.getElementById("branchPassList");
+  el.innerHTML = branches.map(b=>`
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <span style="flex:1; font-size:13.5px;">${escapeHtml(b.name)}</span>
+      <input type="text" class="branchPassInput" data-id="${b.id}" value="${escapeHtml(b.maintenance_password || "")}" style="flex:1;">
+    </div>
+  `).join("");
+}
+
+document.getElementById("saveBranchPassBtn").addEventListener("click", async ()=>{
+  const msgEl = document.getElementById("branchPassMsg");
+  const btn = document.getElementById("saveBranchPassBtn");
+  msgEl.className = "msg"; msgEl.textContent = "";
+  const inputs = document.querySelectorAll(".branchPassInput");
+  btn.disabled = true; btn.textContent = "جارِ الحفظ...";
+  try{
+    for(const input of inputs){
+      await sb(`branches?id=eq.${input.dataset.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ maintenance_password: input.value })
+      });
+    }
+    msgEl.className = "msg ok";
+    msgEl.textContent = "تم حفظ كلمات مرور الفروع.";
+  }catch(e){
+    msgEl.className = "msg err";
+    msgEl.textContent = "تعذر الحفظ. حاول مرة أخرى.";
+  }finally{
+    btn.disabled = false; btn.textContent = "حفظ كلمات مرور الفروع";
+  }
+});
+
+function renderBranchWaList(){
+  const el = document.getElementById("branchWaList");
+  el.innerHTML = branches.map(b=>`
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <span style="flex:1; font-size:13.5px;">${escapeHtml(b.name)}</span>
+      <input type="text" class="branchWaInput" data-id="${b.id}" value="${escapeHtml(b.manager_whatsapp || "")}" placeholder="97336XXXXXX" style="flex:1;">
+    </div>
+  `).join("");
+}
+
+document.getElementById("saveBranchWaBtn").addEventListener("click", async ()=>{
+  const msgEl = document.getElementById("branchWaMsg");
+  const btn = document.getElementById("saveBranchWaBtn");
+  msgEl.className = "msg"; msgEl.textContent = "";
+  const inputs = document.querySelectorAll(".branchWaInput");
+  btn.disabled = true; btn.textContent = "جارِ الحفظ...";
+  try{
+    for(const input of inputs){
+      await sb(`branches?id=eq.${input.dataset.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ manager_whatsapp: input.value.trim() || null })
+      });
+    }
+    msgEl.className = "msg ok";
+    msgEl.textContent = "تم حفظ أرقام واتساب الفروع.";
+  }catch(e){
+    msgEl.className = "msg err";
+    msgEl.textContent = "تعذر الحفظ. حاول مرة أخرى.";
+  }finally{
+    btn.disabled = false; btn.textContent = "حفظ أرقام واتساب الفروع";
+  }
+});
+
 document.getElementById("savePassBtn").addEventListener("click", async ()=>{
   const newAdmin = document.getElementById("newAdminPass").value;
   const newTeam = document.getElementById("newTeamPass").value;
@@ -279,6 +362,12 @@ document.getElementById("savePassBtn").addEventListener("click", async ()=>{
   }finally{
     btn.disabled = false; btn.textContent = "حفظ";
   }
+});
+
+document.getElementById("forgotPassLink").addEventListener("click", (e)=>{
+  e.preventDefault();
+  const text = encodeURIComponent("مرحباً، نسيت كلمة مرور لوحة إدارة الصيانة. ممكن ترسلها لي؟");
+  window.open(`https://wa.me/97333787872?text=${text}`, "_blank");
 });
 
 document.getElementById("enterBtn").addEventListener("click", async ()=>{

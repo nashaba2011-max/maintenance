@@ -74,6 +74,7 @@
     <input id="branchPass" type="password" placeholder="Password">
     <button id="continueBtn">Continue</button>
     <div id="loginMsg" class="msg err"></div>
+    <a href="#" id="forgotPassLink" style="display:block; text-align:center; font-size:12.5px; color:var(--primary); text-decoration:none; margin-top:10px; font-weight:600;">Forgot password?</a>
   </div>
 
   <!-- Step 2: report -->
@@ -174,6 +175,29 @@ async function init(){
   }
 }
 
+document.getElementById("forgotPassLink").addEventListener("click", async (e)=>{
+  e.preventDefault();
+  const sel = document.getElementById("branchSelect");
+  const msgEl = document.getElementById("loginMsg");
+  if(!sel.value){
+    msgEl.textContent = "Please select a branch first.";
+    return;
+  }
+  const branchName = sel.selectedOptions[0].textContent;
+  const text = encodeURIComponent(`Hi, I forgot the password for the ${branchName} branch in the maintenance report system. Could you send it to me?`);
+  try{
+    const rows = await sb(`branches?id=eq.${sel.value}&select=manager_whatsapp`);
+    const number = rows[0]?.manager_whatsapp;
+    if(!number){
+      msgEl.textContent = "No WhatsApp number is set for this branch's manager yet.";
+      return;
+    }
+    window.open(`https://wa.me/${number}?text=${text}`, "_blank");
+  }catch(e){
+    msgEl.textContent = "Something went wrong. Please try again.";
+  }
+});
+
 document.getElementById("continueBtn").addEventListener("click", async ()=>{
   const sel = document.getElementById("branchSelect");
   const pass = document.getElementById("branchPass").value;
@@ -181,8 +205,8 @@ document.getElementById("continueBtn").addEventListener("click", async ()=>{
   msgEl.textContent = "";
   if(!sel.value){ msgEl.textContent = "Please select a branch."; return; }
   try{
-    const rows = await sb(`branches?id=eq.${sel.value}&select=id,name,password`);
-    if(rows.length === 0 || rows[0].password !== pass){
+    const rows = await sb(`branches?id=eq.${sel.value}&select=id,name,maintenance_password`);
+    if(rows.length === 0 || rows[0].maintenance_password !== pass){
       msgEl.textContent = "Incorrect password.";
       return;
     }
