@@ -48,8 +48,8 @@
   .msg.err{color:var(--urgent);}
   .msg.ok{color:var(--primary);}
   .login-card{max-width:360px; margin:60px auto 0;}
-  #savePassBtn, #saveBranchPassBtn, #saveBranchWaBtn{padding:11px; border:none; border-radius:9px; background:var(--primary); color:var(--primary-ink); font-size:14px; font-weight:700; cursor:pointer;}
-  #savePassBtn:disabled, #saveBranchPassBtn:disabled, #saveBranchWaBtn:disabled{opacity:.5; cursor:default;}
+  #savePassBtn, #saveBranchPassBtn, #saveBranchWaBtn, #saveTeamWaBtn{padding:11px; border:none; border-radius:9px; background:var(--primary); color:var(--primary-ink); font-size:14px; font-weight:700; cursor:pointer;}
+  #savePassBtn:disabled, #saveBranchPassBtn:disabled, #saveBranchWaBtn:disabled, #saveTeamWaBtn:disabled{opacity:.5; cursor:default;}
 </style>
 </head>
 <body>
@@ -133,6 +133,14 @@
     <button id="saveBranchWaBtn" style="width:100%; margin-top:6px;">Save WhatsApp Numbers</button>
     <div id="branchWaMsg" class="msg"></div>
   </div>
+
+  <div class="card" style="max-width:420px;">
+    <div class="section-title">Maintenance Team WhatsApp Numbers (notified on every new ticket)</div>
+    <label for="teamWaNumbers">One number per line, international format without + (e.g. 97333787872)</label>
+    <textarea id="teamWaNumbers" rows="4" style="width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:9px; font-size:14px; background:#FCFBF9; color:var(--ink); font-family:inherit; resize:vertical;" placeholder="97333787872&#10;97336XXXXXX"></textarea>
+    <button id="saveTeamWaBtn" style="width:100%; margin-top:10px;">Save Team Numbers</button>
+    <div id="teamWaMsg" class="msg"></div>
+  </div>
   </div>
 </div>
 
@@ -182,6 +190,8 @@ async function init(){
   });
   renderBranchPassList();
   renderBranchWaList();
+  const settingsRows = await sb("admin_settings?select=team_whatsapp_numbers&limit=1");
+  document.getElementById("teamWaNumbers").value = (settingsRows[0]?.team_whatsapp_numbers || "").replace(/,/g, "\n");
 
   allTickets = await sb("maintenance_tickets?select=*,branches(name),maintenance_categories(name,name_en),maintenance_staff(name)&order=created_at.desc");
   const photoRows = await sb("ticket_photos?select=ticket_id");
@@ -206,6 +216,7 @@ function renderStats(){
     const totalMs = closedTickets.reduce((sum,t)=> sum + (new Date(t.closed_at)-new Date(t.created_at)), 0);
     avgHours = Math.round(totalMs / closedTickets.length / 3600000) + " hrs";
   }
+  const totalCost = allTickets.reduce((sum,t)=> sum + (t.cost || 0), 0);
   const row = document.getElementById("statsRow");
   row.innerHTML = `
     <div class="stat"><div class="num">${open}</div><div class="lbl">Open tickets</div></div>
@@ -213,6 +224,7 @@ function renderStats(){
     <div class="stat urgent"><div class="num">${urgent}</div><div class="lbl">Urgent unresolved</div></div>
     <div class="stat"><div class="num">${allTickets.length}</div><div class="lbl">Total tickets</div></div>
     <div class="stat"><div class="num">${avgHours}</div><div class="lbl">Avg. time to close</div></div>
+    <div class="stat"><div class="num">${totalCost.toFixed(3)}</div><div class="lbl">Total maintenance cost (BHD)</div></div>
   `;
 }
 
@@ -252,7 +264,7 @@ function renderTable(){
   area.innerHTML = `
     <table>
       <thead><tr>
-        <th>Branch</th><th>Category</th><th>Description</th><th>Priority</th><th>Status</th><th>Technician</th><th>Reported</th>
+        <th>Branch</th><th>Category</th><th>Description</th><th>Priority</th><th>Status</th><th>Technician</th><th>Reported</th><th>Started</th><th>Finished</th><th>Authorized By</th><th>Performed By</th><th>Approved By</th><th>Cost</th>
       </tr></thead>
       <tbody>
         ${rows.map(t=>`
@@ -264,6 +276,12 @@ function renderTable(){
             <td><span class="status-pill status-${t.status}">${STATUS_LABEL[t.status]}</span></td>
             <td>${escapeHtml(t.maintenance_staff?.name || "—")}</td>
             <td>${new Date(t.created_at).toLocaleString("en-GB", {dateStyle:"short", timeStyle:"short"})}</td>
+            <td>${t.started_at ? new Date(t.started_at).toLocaleString("en-GB", {dateStyle:"short", timeStyle:"short"}) : "—"}</td>
+            <td>${t.closed_at ? new Date(t.closed_at).toLocaleString("en-GB", {dateStyle:"short", timeStyle:"short"}) : "—"}</td>
+            <td>${escapeHtml(t.authorized_by || "—")}</td>
+            <td>${escapeHtml(t.performed_by || "—")}</td>
+            <td>${escapeHtml(t.approved_by || "—")}</td>
+            <td>${t.cost != null ? "BHD " + t.cost.toFixed(3) : "—"}</td>
           </tr>
         `).join("")}
       </tbody>
@@ -313,6 +331,25 @@ function renderBranchWaList(){
     </div>
   `).join("");
 }
+
+document.getElementById("saveTeamWaBtn").addEventListener("click", async ()=>{
+  const msgEl = document.getElementById("teamWaMsg");
+  const btn = document.getElementById("saveTeamWaBtn");
+  msgEl.className = "msg"; msgEl.textContent = "";
+  const numbers = document.getElementById("teamWaNumbers").value
+    .split("\n").map(s=>s.trim()).filter(Boolean).join(",");
+  btn.disabled = true; btn.textContent = "Saving...";
+  try{
+    await sb("admin_settings?id=eq.true", { method:"PATCH", body: JSON.stringify({ team_whatsapp_numbers: numbers }) });
+    msgEl.className = "msg ok";
+    msgEl.textContent = "Team numbers saved.";
+  }catch(e){
+    msgEl.className = "msg err";
+    msgEl.textContent = "Could not save. Please try again.";
+  }finally{
+    btn.disabled = false; btn.textContent = "Save Team Numbers";
+  }
+});
 
 document.getElementById("saveBranchWaBtn").addEventListener("click", async ()=>{
   const msgEl = document.getElementById("branchWaMsg");
