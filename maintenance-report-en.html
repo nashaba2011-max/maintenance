@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>بلاغ صيانة — فريق</title>
+<title>Maintenance Report</title>
 <style>
   :root{
     --bg:#F5F2EC; --surface:#FFFFFF; --ink:#211E1A; --muted:#7A7268; --line:#E4DFD5;
@@ -42,7 +42,7 @@
   .thumb{position:relative; width:72px; height:72px; border-radius:8px; overflow:hidden; border:1px solid var(--line);}
   .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
   .thumb .rm{
-    position:absolute; top:2px; left:2px; background:rgba(33,30,26,.75); color:#fff; border:none;
+    position:absolute; top:2px; right:2px; background:rgba(33,30,26,.75); color:#fff; border:none;
     border-radius:100px; width:20px; height:20px; font-size:12px; line-height:1; cursor:pointer; padding:0;
   }
   button{
@@ -62,49 +62,49 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>بلاغ صيانة</h1>
-    <span class="brand">فريق بن عقول / جست بنز</span>
+    <h1>Maintenance Report</h1>
+    <span class="brand">Fareeq Bin Aqool / Just Buns</span>
   </header>
 
   <!-- Step 1: choose branch -->
   <div id="branchCard" class="card">
-    <label for="branchSelect">اختر الفرع</label>
-    <select id="branchSelect"><option value="">اختر الفرع...</option></select>
-    <label for="branchPass">كلمة مرور الفرع</label>
-    <input id="branchPass" type="password" placeholder="كلمة المرور">
-    <button id="continueBtn">متابعة</button>
+    <label for="branchSelect">Select Branch</label>
+    <select id="branchSelect"><option value="">Select branch...</option></select>
+    <label for="branchPass">Branch Password</label>
+    <input id="branchPass" type="password" placeholder="Password">
+    <button id="continueBtn">Continue</button>
     <div id="loginMsg" class="msg err"></div>
   </div>
 
   <!-- Step 2: report -->
   <div id="reportCard" class="card hidden">
     <div class="branch-tag">
-      <span>الفرع: <b id="branchNameLbl"></b></span>
-      <a href="#" id="changeBranchLink">تغيير الفرع</a>
+      <span>Branch: <b id="branchNameLbl"></b></span>
+      <a href="#" id="changeBranchLink">Change branch</a>
     </div>
 
-    <label for="catSelect">نوع المشكلة</label>
-    <select id="catSelect"><option value="">اختر التصنيف...</option></select>
+    <label for="catSelect">Problem Type</label>
+    <select id="catSelect"><option value="">Select category...</option></select>
 
-    <label>الأولوية</label>
+    <label>Priority</label>
     <div class="priority-row">
-      <label class="pill"><input type="radio" name="priority" value="urgent"><span>عاجل</span></label>
-      <label class="pill"><input type="radio" name="priority" value="normal" checked><span>عادي</span></label>
-      <label class="pill"><input type="radio" name="priority" value="low"><span>غير عاجل</span></label>
+      <label class="pill"><input type="radio" name="priority" value="urgent"><span>Urgent</span></label>
+      <label class="pill"><input type="radio" name="priority" value="normal" checked><span>Normal</span></label>
+      <label class="pill"><input type="radio" name="priority" value="low"><span>Low</span></label>
     </div>
 
-    <label for="descBox">وصف المشكلة / التقرير</label>
-    <textarea id="descBox" placeholder="اكتب تفاصيل المشكلة..."></textarea>
+    <label for="descBox">Problem Description / Report</label>
+    <textarea id="descBox" placeholder="Describe the issue..."></textarea>
 
-    <label for="reporterName">اسمك</label>
-    <input id="reporterName" type="text" placeholder="اسمك (اختياري)">
+    <label for="reporterName">Your Name</label>
+    <input id="reporterName" type="text" placeholder="Your name (optional)">
 
-    <label>صور (اختياري)</label>
-    <div class="photo-drop" id="photoDrop">اضغط هنا لإضافة صور</div>
+    <label>Photos (optional)</label>
+    <div class="photo-drop" id="photoDrop">Tap here to add photos</div>
     <input id="photoInput" type="file" accept="image/*" multiple>
     <div class="thumbs" id="thumbs"></div>
 
-    <button id="submitBtn">إرسال البلاغ</button>
+    <button id="submitBtn">Submit Report</button>
     <div id="reportMsg" class="msg"></div>
   </div>
 </div>
@@ -156,21 +156,21 @@ async function init(){
       o.value = b.id; o.dataset.name = b.name; o.textContent = b.name;
       sel.appendChild(o);
     });
-    const categories = await sb("maintenance_categories?select=*&order=type.asc,name.asc");
+    const categories = await sb("maintenance_categories?select=*&order=type.asc,name_en.asc");
     const catSel = document.getElementById("catSelect");
-    const groups = {equipment:"معدات", facility:"مرافق"};
+    const groups = {equipment:"Equipment", facility:"Facility"};
     Object.keys(groups).forEach(type=>{
       const og = document.createElement("optgroup");
       og.label = groups[type];
       categories.filter(c=>c.type===type).forEach(c=>{
         const o = document.createElement("option");
-        o.value = c.id; o.textContent = c.name;
+        o.value = c.id; o.textContent = c.name_en || c.name;
         og.appendChild(o);
       });
       catSel.appendChild(og);
     });
   }catch(e){
-    document.getElementById("branchCard").insertAdjacentHTML("beforeend", '<div class="msg err">تعذر تحميل بيانات الفروع.</div>');
+    document.getElementById("branchCard").insertAdjacentHTML("beforeend", '<div class="msg err">Could not load branch data.</div>');
   }
 }
 
@@ -179,11 +179,11 @@ document.getElementById("continueBtn").addEventListener("click", async ()=>{
   const pass = document.getElementById("branchPass").value;
   const msgEl = document.getElementById("loginMsg");
   msgEl.textContent = "";
-  if(!sel.value){ msgEl.textContent = "الرجاء اختيار الفرع."; return; }
+  if(!sel.value){ msgEl.textContent = "Please select a branch."; return; }
   try{
     const rows = await sb(`branches?id=eq.${sel.value}&select=id,name,password`);
     if(rows.length === 0 || rows[0].password !== pass){
-      msgEl.textContent = "كلمة المرور غير صحيحة.";
+      msgEl.textContent = "Incorrect password.";
       return;
     }
     currentBranch = { id: rows[0].id, name: rows[0].name };
@@ -191,7 +191,7 @@ document.getElementById("continueBtn").addEventListener("click", async ()=>{
     document.getElementById("branchCard").classList.add("hidden");
     document.getElementById("reportCard").classList.remove("hidden");
   }catch(e){
-    msgEl.textContent = "حدث خطأ. حاول مرة أخرى.";
+    msgEl.textContent = "Something went wrong. Please try again.";
   }
 });
 
@@ -243,10 +243,10 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
   const btn = document.getElementById("submitBtn");
   msgEl.className = "msg"; msgEl.textContent = "";
 
-  if(!catId){ msgEl.className = "msg err"; msgEl.textContent = "الرجاء اختيار نوع المشكلة."; return; }
-  if(!desc){ msgEl.className = "msg err"; msgEl.textContent = "الرجاء كتابة وصف للمشكلة."; return; }
+  if(!catId){ msgEl.className = "msg err"; msgEl.textContent = "Please select a problem type."; return; }
+  if(!desc){ msgEl.className = "msg err"; msgEl.textContent = "Please write a description."; return; }
 
-  btn.disabled = true; btn.textContent = "جارِ الإرسال...";
+  btn.disabled = true; btn.textContent = "Submitting...";
   try{
     const created = await sb("maintenance_tickets", {
       method: "POST",
@@ -261,18 +261,18 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
     const ticket = created[0];
 
     if(selectedFiles.length){
-      btn.textContent = `جارِ رفع الصور (0/${selectedFiles.length})...`;
+      btn.textContent = `Uploading photos (0/${selectedFiles.length})...`;
       for(let i=0; i<selectedFiles.length; i++){
         const file = selectedFiles[i];
         const path = `${ticket.id}/${Date.now()}-${i}-${escapeSlug(file.name)}`;
         const url = await uploadPhoto(path, file);
         await sb("ticket_photos", { method:"POST", body: JSON.stringify({ ticket_id: ticket.id, url }) });
-        btn.textContent = `جارِ رفع الصور (${i+1}/${selectedFiles.length})...`;
+        btn.textContent = `Uploading photos (${i+1}/${selectedFiles.length})...`;
       }
     }
 
     msgEl.className = "msg ok";
-    msgEl.textContent = "تم إرسال البلاغ بنجاح.";
+    msgEl.textContent = "Report submitted successfully.";
     document.getElementById("catSelect").value = "";
     document.getElementById("descBox").value = "";
     document.getElementById("reporterName").value = "";
@@ -281,9 +281,9 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
     renderThumbs();
   }catch(e){
     msgEl.className = "msg err";
-    msgEl.textContent = "تعذر إرسال البلاغ. حاول مرة أخرى.";
+    msgEl.textContent = "Could not submit report. Please try again.";
   }finally{
-    btn.disabled = false; btn.textContent = "إرسال البلاغ";
+    btn.disabled = false; btn.textContent = "Submit Report";
   }
 });
 
