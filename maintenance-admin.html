@@ -16,6 +16,8 @@
   header{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:10px;}
   header h1{font-size:21px; margin:0; font-weight:700;}
   header .brand{font-size:13px; color:var(--muted);}
+  .homeLink{display:inline-block; font-size:12.5px; color:var(--muted); text-decoration:none; margin-bottom:10px;}
+  .homeLink:hover{color:var(--primary);}
   .pageNav{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px;}
   .pageNav a{padding:7px 14px; border-radius:100px; border:1px solid var(--line); background:var(--surface); color:var(--ink); text-decoration:none; font-size:13px; font-weight:600;}
   .pageNav a.active{background:var(--primary); color:var(--primary-ink); border-color:var(--primary);}
@@ -62,6 +64,7 @@
 </head>
 <body>
 <div class="wrap">
+  <a href="index.html" class="homeLink">← <span data-i18n="navHome">Home</span></a>
   <header>
     <div>
       <h1 data-i18n="title">لوحة إدارة الصيانة</h1>
