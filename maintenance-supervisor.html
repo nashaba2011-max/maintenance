@@ -16,8 +16,11 @@
   header{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; gap:10px;}
   header h1{font-size:20px; margin:0; font-weight:700;}
   header .brand{font-size:13px; color:var(--muted);}
-  .homeLink{display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--primary); text-decoration:none; margin-bottom:14px; padding:8px 14px; border:1px solid var(--primary); border-radius:100px; background:var(--surface);}
-  .homeLink:hover{background:var(--primary); color:var(--primary-ink);}
+  .homeLink{display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:700; color:var(--primary); text-decoration:none; margin-bottom:14px; padding:8px 16px; border:1px solid var(--primary); border-radius:100px; background:var(--surface); transition:all .2s ease;}
+  .homeLink:hover{background:var(--primary); color:var(--primary-ink); transform:translateY(-1px); box-shadow:0 4px 10px rgba(44,74,62,.25);}
+  .homeLink:active{transform:translateY(0); box-shadow:none;}
+  .homeIcon{width:16px; height:16px; transition:transform .2s ease;}
+  .homeLink:hover .homeIcon{transform:translateY(-1px) scale(1.08);}
   #langToggle{width:auto; margin:0; padding:6px 12px; font-size:12.5px; font-weight:700; background:var(--surface); color:var(--primary); border:1px solid var(--primary); border-radius:100px; cursor:pointer;}
   .card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:14px;}
   label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px;}
@@ -87,7 +90,10 @@
 </head>
 <body>
 <div class="wrap">
-  <a href="index.html" class="homeLink">← <span data-i18n="navHome">Home</span></a>
+  <a href="index.html" class="homeLink">
+    <svg class="homeIcon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 11.5L12 4l9 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span data-i18n="navHome">Home</span>
+  </a>
   <header>
     <div>
       <h1 data-i18n="title">مسؤول الصيانة</h1>
