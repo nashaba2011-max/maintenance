@@ -179,6 +179,7 @@ const I18N = {
     leaveBlank:"اتركها فاضية لعدم التغيير", newTeamPassword:"كلمة مرور فريق الصيانة الجديدة", save:"حفظ",
     branchPasswords:"كلمات مرور الفروع (لصفحة البلاغ)", saveBranchPasswords:"حفظ كلمات مرور الفروع",
     branchWaTitle:"أرقام واتساب مسؤولي الفروع", saveBranchWa:"حفظ أرقام واتساب الفروع",
+    number1:"رقم 1", number2:"رقم 2 (اختياري)",
     teamWaTitle:"أرقام واتساب فريق الصيانة (تنبيه عند كل بلاغ جديد)",
     teamWaHelp:"رقم واحد بكل سطر، بالصيغة الدولية بدون + (مثال: 97333787872)", saveTeamWa:"حفظ أرقام الفريق",
     openTickets:"بلاغات مفتوحة", inProgressLbl:"قيد التنفيذ", urgentUnresolved:"عاجلة غير مقفلة",
@@ -206,6 +207,7 @@ const I18N = {
     leaveBlank:"Leave blank to keep unchanged", newTeamPassword:"New maintenance team password", save:"Save",
     branchPasswords:"Branch Passwords (for report page)", saveBranchPasswords:"Save Branch Passwords",
     branchWaTitle:"Branch Managers' WhatsApp Numbers", saveBranchWa:"Save WhatsApp Numbers",
+    number1:"Number 1", number2:"Number 2 (optional)",
     teamWaTitle:"Maintenance Team WhatsApp Numbers (notified on every new ticket)",
     teamWaHelp:"One number per line, international format without + (e.g. 97333787872)", saveTeamWa:"Save Team Numbers",
     openTickets:"Open tickets", inProgressLbl:"In progress", urgentUnresolved:"Urgent unresolved",
@@ -453,25 +455,34 @@ document.getElementById("saveBranchPassBtn").addEventListener("click", async ()=
 
 function renderBranchWaList(){
   const el = document.getElementById("branchWaList");
-  el.innerHTML = branches.map(b=>`
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-      <span style="flex:1; font-size:13.5px;">${escapeHtml(b.name)}</span>
-      <input type="text" class="branchWaInput" data-id="${b.id}" value="${escapeHtml(b.manager_whatsapp || "")}" placeholder="97336XXXXXX" style="flex:1;">
+  el.innerHTML = branches.map(b=>{
+    const nums = (b.manager_whatsapp || "").split(",").map(s=>s.trim()).filter(Boolean);
+    return `
+    <div style="margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--line);">
+      <span style="font-size:13.5px; font-weight:600;">${escapeHtml(b.name)}</span>
+      <div style="display:flex; gap:8px; margin-top:6px;">
+        <input type="text" class="branchWaInput1" data-id="${b.id}" value="${escapeHtml(nums[0] || "")}" placeholder="${t("number1")}" style="flex:1;">
+        <input type="text" class="branchWaInput2" data-id="${b.id}" value="${escapeHtml(nums[1] || "")}" placeholder="${t("number2")}" style="flex:1;">
+      </div>
     </div>
-  `).join("");
+  `;
+  }).join("");
 }
 
 document.getElementById("saveBranchWaBtn").addEventListener("click", async ()=>{
   const msgEl = document.getElementById("branchWaMsg");
   const btn = document.getElementById("saveBranchWaBtn");
   msgEl.className = "msg"; msgEl.textContent = "";
-  const inputs = document.querySelectorAll(".branchWaInput");
+  const inputs1 = document.querySelectorAll(".branchWaInput1");
   btn.disabled = true; btn.textContent = t("saving");
   try{
-    for(const input of inputs){
-      await sb(`branches?id=eq.${input.dataset.id}`, {
+    for(const input1 of inputs1){
+      const id = input1.dataset.id;
+      const input2 = document.querySelector(`.branchWaInput2[data-id="${id}"]`);
+      const nums = [input1.value.trim(), input2.value.trim()].filter(Boolean);
+      await sb(`branches?id=eq.${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ manager_whatsapp: input.value.trim() || null })
+        body: JSON.stringify({ manager_whatsapp: nums.length ? nums.join(",") : null })
       });
     }
     msgEl.className = "msg ok";
