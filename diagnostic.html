@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Diagnostic Test</title>
+</head>
+<body style="font-family:monospace; padding:20px; background:white; color:black;">
+<h1>Diagnostic Test Page</h1>
+<p id="step1">1. Page HTML loaded: YES (you can see this)</p>
+<p id="step2">2. JavaScript running: checking...</p>
+<p id="step3">3. Fetching from database: checking...</p>
+<pre id="result" style="background:#eee; padding:10px; white-space:pre-wrap;"></pre>
+
+<script>
+document.getElementById("step2").textContent = "2. JavaScript running: YES";
+
+const SUPABASE_URL = "https://lzadmbjhcxqvafykntsp.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6YWRtYmpoY3hxdmFmeWtudHNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NjQwOTYsImV4cCI6MjEwNTA0MDA5Nn0.HNGwF8_lHrUHU_Xhx9Ymn0eoLHGaJ2GVd69umNNkXCI";
+
+const startTime = Date.now();
+
+fetch(`${SUPABASE_URL}/rest/v1/branches?select=id,name&order=name.asc`, {
+  headers: {
+    "apikey": SUPABASE_KEY,
+    "Authorization": `Bearer ${SUPABASE_KEY}`
+  }
+})
+.then(res => {
+  const elapsed = Date.now() - startTime;
+  document.getElementById("step3").textContent = `3. Fetching from database: RESPONSE RECEIVED after ${elapsed}ms (status ${res.status})`;
+  return res.json();
+})
+.then(data => {
+  document.getElementById("result").textContent = "SUCCESS! Data received:\n" + JSON.stringify(data, null, 2);
+  document.getElementById("result").style.background = "#d4f7d4";
+})
+.catch(err => {
+  document.getElementById("result").textContent = "ERROR: " + err.message + "\n\n" + err.stack;
+  document.getElementById("result").style.background = "#f7d4d4";
+});
+
+setTimeout(() => {
+  if(document.getElementById("result").textContent === ""){
+    document.getElementById("result").textContent = "STILL WAITING after 10 seconds — request is hanging, no response and no error.";
+    document.getElementById("result").style.background = "#fff3cd";
+  }
+}, 10000);
+</script>
+</body>
+</html>
