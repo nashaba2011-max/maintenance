@@ -79,11 +79,8 @@
   <div id="branchCard" class="card">
     <label for="branchSelect" data-i18n="selectBranch">اختر الفرع</label>
     <select id="branchSelect"><option value="" data-i18n="selectBranchOpt">اختر الفرع...</option></select>
-    <label for="branchPass" data-i18n="branchPassword">كلمة مرور الفرع</label>
-    <input id="branchPass" type="password" data-i18n-placeholder="password">
     <button id="continueBtn" data-i18n="continue">متابعة</button>
     <div id="loginMsg" class="msg err"></div>
-    <a href="#" id="forgotPassLink" style="display:block; text-align:center; font-size:12.5px; color:var(--primary); text-decoration:none; margin-top:10px; font-weight:600;" data-i18n="forgotPassword">نسيت كلمة المرور؟</a>
   </div>
 
   <!-- Step 2: report -->
@@ -91,15 +88,6 @@
     <div class="branch-tag">
       <span data-i18n="branchLabel">الفرع: <b id="branchNameLbl"></b></span>
       <a href="#" id="changeBranchLink" data-i18n="changeBranch">تغيير الفرع</a>
-    </div>
-    <div style="text-align:start; margin-bottom:10px;">
-      <a href="#" id="showChangePassLink" style="font-size:12px; color:var(--muted); text-decoration:none;" data-i18n="changeBranchPassword">تغيير كلمة مرور الفرع</a>
-    </div>
-    <div id="changePassBox" class="hidden" style="background:#FCFBF9; border:1px solid var(--line); border-radius:9px; padding:12px; margin-bottom:14px;">
-      <label for="newBranchPass" style="margin-top:0;" data-i18n="newPassword">كلمة المرور الجديدة</label>
-      <input id="newBranchPass" type="password" data-i18n-placeholder="newPassword">
-      <button id="saveBranchPassBtnLocal" style="margin-top:10px;" data-i18n="saveNewPassword">حفظ كلمة المرور الجديدة</button>
-      <div id="changePassMsg" class="msg"></div>
     </div>
 
     <label for="catSelect" data-i18n="problemType">نوع المشكلة</label>
@@ -276,81 +264,20 @@ async function init(){
   }
 }
 
-document.getElementById("forgotPassLink").addEventListener("click", async (e)=>{
-  e.preventDefault();
-  const sel = document.getElementById("branchSelect");
-  const msgEl = document.getElementById("loginMsg");
-  if(!sel.value){
-    msgEl.textContent = t("selectBranchForForgot");
-    return;
-  }
-  const branchName = sel.selectedOptions[0].textContent;
-  const text = encodeURIComponent(t("forgotWhatsappMsg")(branchName));
-  try{
-    const rows = await sb(`branches?id=eq.${sel.value}&select=manager_whatsapp`);
-    const number = rows[0]?.manager_whatsapp;
-    if(!number){
-      msgEl.textContent = t("noManagerNumber");
-      return;
-    }
-    window.open(`https://wa.me/${number}?text=${text}`, "_blank");
-  }catch(e){
-    msgEl.textContent = t("genericError");
-  }
-});
-
-document.getElementById("showChangePassLink").addEventListener("click", (e)=>{
-  e.preventDefault();
-  document.getElementById("changePassBox").classList.toggle("hidden");
-});
-
-document.getElementById("saveBranchPassBtnLocal").addEventListener("click", async ()=>{
-  const newPass = document.getElementById("newBranchPass").value.trim();
-  const msgEl = document.getElementById("changePassMsg");
-  const btn = document.getElementById("saveBranchPassBtnLocal");
-  msgEl.className = "msg"; msgEl.textContent = "";
-  if(!newPass){ msgEl.className = "msg err"; msgEl.textContent = t("enterNewPassword"); return; }
-  btn.disabled = true; btn.textContent = t("saving");
-  try{
-    await sb(`branches?id=eq.${currentBranch.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ maintenance_password: newPass })
-    });
-    msgEl.className = "msg ok";
-    msgEl.textContent = t("passwordChanged");
-    document.getElementById("newBranchPass").value = "";
-  }catch(e){
-    msgEl.className = "msg err";
-    msgEl.textContent = t("saveFail");
-  }finally{
-    btn.disabled = false; btn.textContent = t("saveNewPassword");
-  }
-});
-
 document.getElementById("continueBtn").addEventListener("click", async ()=>{
   const sel = document.getElementById("branchSelect");
-  const pass = document.getElementById("branchPass").value;
   const msgEl = document.getElementById("loginMsg");
   msgEl.textContent = "";
   if(!sel.value){ msgEl.textContent = t("selectBranchFirst"); return; }
-  try{
-    const rows = await sb(`branches?id=eq.${sel.value}&select=id,name,maintenance_password`);
-    if(rows.length === 0 || rows[0].maintenance_password !== pass){
-      msgEl.textContent = t("wrongPassword");
-      return;
-    }
-    currentBranch = { id: rows[0].id, name: rows[0].name };
-    const branchLabelSpan = document.querySelector('[data-i18n="branchLabel"]');
-    branchLabelSpan.textContent = t("branchLabel");
-    const b = document.createElement("b");
-    b.id = "branchNameLbl";
-    b.textContent = currentBranch.name;
-    branchLabelSpan.appendChild(b);
-    document.getElementById("branchCard").classList.add("hidden");
-    document.getElementById("reportCard").classList.remove("hidden");
-  }catch(e){
-    msgEl.textContent = t("genericError");
-  }
+  currentBranch = { id: sel.value, name: sel.selectedOptions[0].textContent };
+  const branchLabelSpan = document.querySelector('[data-i18n="branchLabel"]');
+  branchLabelSpan.textContent = t("branchLabel");
+  const b = document.createElement("b");
+  b.id = "branchNameLbl";
+  b.textContent = currentBranch.name;
+  branchLabelSpan.appendChild(b);
+  document.getElementById("branchCard").classList.add("hidden");
+  document.getElementById("reportCard").classList.remove("hidden");
 });
 
 document.getElementById("changeBranchLink").addEventListener("click", (e)=>{

@@ -66,15 +66,7 @@
     </div>
   </header>
 
-  <div id="loginCard" class="card login-card">
-    <label for="adminPass" data-i18n="adminPassword">كلمة مرور الإدارة</label>
-    <input id="adminPass" type="password" data-i18n-placeholder="password" style="width:100%; margin-bottom:10px;">
-    <button id="enterBtn" style="width:100%; padding:11px; border:none; border-radius:9px; background:var(--primary); color:var(--primary-ink); font-size:14px; font-weight:700; cursor:pointer;" data-i18n="enter">دخول</button>
-    <div id="loginMsg" class="msg err"></div>
-    <a href="#" id="forgotPassLink" style="display:block; text-align:center; font-size:12.5px; color:var(--primary); text-decoration:none; margin-top:10px; font-weight:600;" data-i18n="forgotPassword">نسيت كلمة المرور؟</a>
-  </div>
-
-  <div id="mainArea" class="hidden">
+  <div id="mainArea">
     <div class="stats" id="statsRow"></div>
 
     <div class="card">
@@ -250,39 +242,6 @@ function escapeHtml(s){
   d.textContent = s || "";
   return d.innerHTML;
 }
-
-document.getElementById("forgotPassLink").addEventListener("click", async (e)=>{
-  e.preventDefault();
-  const msgEl = document.getElementById("loginMsg");
-  const text = encodeURIComponent(t("forgotWhatsappMsg"));
-  try{
-    const rows = await sb("admin_settings?select=team_whatsapp_numbers&limit=1");
-    const numbers = (rows[0]?.team_whatsapp_numbers || "").split(",").map(s=>s.trim()).filter(Boolean);
-    if(!numbers.length){ msgEl.textContent = t("noTeamNumber"); return; }
-    window.open(`https://wa.me/${numbers[0]}?text=${text}`, "_blank");
-  }catch(e){
-    msgEl.textContent = t("genericError");
-  }
-});
-
-document.getElementById("enterBtn").addEventListener("click", async ()=>{
-  const pass = document.getElementById("adminPass").value;
-  const msgEl = document.getElementById("loginMsg");
-  msgEl.textContent = "";
-  try{
-    const rows = await sb("admin_settings?select=admin_password&limit=1");
-    if(rows.length === 0 || rows[0].admin_password !== pass){
-      msgEl.textContent = t("wrongPassword");
-      return;
-    }
-  }catch(e){
-    msgEl.textContent = t("genericError");
-    return;
-  }
-  document.getElementById("loginCard").classList.add("hidden");
-  document.getElementById("mainArea").classList.remove("hidden");
-  init();
-});
 
 function renderCatOptions(){
   const cSel = document.getElementById("catFilter");
@@ -570,9 +529,8 @@ function enableEnterNav(containerId, buttonId){
     }
   });
 }
-enableEnterNav("loginCard", "enterBtn");
-
 applyStaticLanguage();
+init();
 </script>
 </body>
 </html>

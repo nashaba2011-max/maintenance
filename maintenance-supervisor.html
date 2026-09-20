@@ -81,17 +81,11 @@
     </div>
   </header>
 
-  <div id="loginCard" class="card">
-    <label for="staffName" data-i18n="yourName">اسمك</label>
-    <input id="staffName" type="text" data-i18n-placeholder="techName" style="width:100%; margin-bottom:10px;">
-    <label for="teamPass" data-i18n="supervisorPassword">كلمة مرور مسؤول الصيانة</label>
-    <input id="teamPass" type="password" data-i18n-placeholder="password" style="width:100%; margin-bottom:10px;">
-    <button id="enterBtn" style="width:100%;" data-i18n="enter">دخول</button>
-    <div id="loginMsg" class="msg err" style="margin-top:8px;"></div>
-    <a href="#" id="forgotPassLink" style="display:block; text-align:center; font-size:12.5px; color:var(--primary); text-decoration:none; margin-top:10px; font-weight:600;" data-i18n="forgotPassword">نسيت كلمة المرور؟</a>
-  </div>
-
-  <div id="mainArea" class="hidden" style="display:none;">
+  <div id="mainArea" style="">
+    <div class="card" style="margin-bottom:14px;">
+      <label for="staffName" data-i18n="yourName">اسمك</label>
+      <input id="staffName" type="text" data-i18n-placeholder="techName" style="width:100%;">
+    </div>
     <div id="statusMsg" style="font-size:13px; color:var(--muted); margin-bottom:10px;"></div>
     <div class="stats" id="statsRow"></div>
     <div class="card">
@@ -217,58 +211,22 @@ async function sb(path, opts={}){
 let staffName = "";
 let branches = [];
 
-document.getElementById("forgotPassLink").addEventListener("click", async (e)=>{
-  e.preventDefault();
-  const msgEl = document.getElementById("loginMsg");
-  const text = encodeURIComponent(t("forgotWhatsappMsg"));
-  try{
-    const rows = await sb("admin_settings?select=team_whatsapp_numbers&limit=1");
-    const numbers = (rows[0]?.team_whatsapp_numbers || "").split(",").map(s=>s.trim()).filter(Boolean);
-    if(!numbers.length){ msgEl.textContent = t("noTeamNumber"); return; }
-    window.open(`https://wa.me/${numbers[0]}?text=${text}`, "_blank");
-  }catch(e){
-    msgEl.textContent = t("genericError");
-  }
+document.getElementById("staffName").addEventListener("change", ()=>{
+  staffName = document.getElementById("staffName").value.trim();
 });
 
-document.getElementById("enterBtn").addEventListener("click", async ()=>{
-  const name = document.getElementById("staffName").value.trim();
-  const pass = document.getElementById("teamPass").value;
-  const msgEl = document.getElementById("loginMsg");
-  msgEl.className = "msg";
-  msgEl.style.color = "";
-  if(!name){ msgEl.className = "msg err"; msgEl.textContent = t("enterName"); return; }
-  msgEl.textContent = "Step 1: checking password...";
-  try{
-    const rows = await sb("admin_settings?select=supervisor_password&limit=1");
-    if(rows.length === 0 || rows[0].supervisor_password !== pass){
-      msgEl.className = "msg err";
-      msgEl.textContent = t("wrongPassword");
-      return;
-    }
-  }catch(e){
-    msgEl.className = "msg err";
-    msgEl.textContent = "Step 1 FAILED: " + e.message;
-    return;
-  }
-  msgEl.textContent = "Step 2: password OK, loading page...";
-  staffName = name;
-  document.getElementById("loginCard").style.display = "none";
-  document.getElementById("mainArea").style.display = "block";
+async function initPage(){
   const statusEl = document.getElementById("statusMsg");
   try{
-    statusEl.textContent = "Step 3: loading branches...";
-    await loadBranches();
-    statusEl.textContent = "Step 4: loading tickets...";
-    await loadTickets();
-    statusEl.textContent = "Step 5: loading stats...";
-    await loadReportStats();
     statusEl.textContent = "";
+    await loadBranches();
+    await loadTickets();
+    await loadReportStats();
   }catch(e){
     statusEl.textContent = "";
     document.getElementById("ticketList").innerHTML = `<div class="empty">${t("loadFail")}: ${e.message}</div>`;
   }
-});
+}
 
 async function loadReportStats(){
   try{
@@ -536,9 +494,8 @@ function enableEnterNav(containerId, buttonId){
     }
   });
 }
-enableEnterNav("loginCard", "enterBtn");
-
 applyLanguage();
+initPage();
 </script>
 </body>
 </html>
