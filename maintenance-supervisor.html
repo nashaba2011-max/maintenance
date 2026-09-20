@@ -16,6 +16,8 @@
   header{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; gap:10px;}
   header h1{font-size:20px; margin:0; font-weight:700;}
   header .brand{font-size:13px; color:var(--muted);}
+  .homeLink{display:inline-block; font-size:12.5px; color:var(--muted); text-decoration:none; margin-bottom:10px;}
+  .homeLink:hover{color:var(--primary);}
   #langToggle{width:auto; margin:0; padding:6px 12px; font-size:12.5px; font-weight:700; background:var(--surface); color:var(--primary); border:1px solid var(--primary); border-radius:100px; cursor:pointer;}
   .card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:14px;}
   label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px;}
@@ -85,6 +87,7 @@
 </head>
 <body>
 <div class="wrap">
+  <a href="index.html" class="homeLink">← <span data-i18n="navHome">Home</span></a>
   <header>
     <div>
       <h1 data-i18n="title">مسؤول الصيانة</h1>
@@ -138,7 +141,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const I18N = {
   ar: {
-    title:"مسؤول الصيانة", yourName:"اسمك", techName:"اسمك", supervisorPassword:"كلمة مرور مسؤول الصيانة",
+    title:"مسؤول الصيانة", navHome:"الرئيسية", yourName:"اسمك", techName:"اسمك", supervisorPassword:"كلمة مرور مسؤول الصيانة",
     password:"كلمة المرور", enter:"دخول", forgotPassword:"نسيت كلمة المرور؟",
     status:"الحالة", openInProgress:"مفتوح + قيد التنفيذ", openOnly:"مفتوح فقط", inProgressOnly:"قيد التنفيذ فقط",
     closed:"مقفل", all:"الكل", branch:"الفرع", allBranches:"كل الفروع", priority:"الأولوية",
@@ -165,7 +168,7 @@ const I18N = {
     dash:"—", langBtn:"English"
   },
   en: {
-    title:"Maintenance Supervisor", yourName:"Your name", techName:"Your name", supervisorPassword:"Maintenance supervisor password",
+    title:"Maintenance Supervisor", navHome:"Home", yourName:"Your name", techName:"Your name", supervisorPassword:"Maintenance supervisor password",
     password:"Password", enter:"Enter", forgotPassword:"Forgot password?",
     status:"Status", openInProgress:"Open + In Progress", openOnly:"Open only", inProgressOnly:"In Progress only",
     closed:"Closed", all:"All", branch:"Branch", allBranches:"All branches", priority:"Priority",

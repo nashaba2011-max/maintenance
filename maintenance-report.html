@@ -59,6 +59,8 @@
   .branch-tag{display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--muted); margin-bottom:6px;}
   .branch-tag b{color:var(--ink); font-size:15px;}
   .branch-tag a{color:var(--primary); font-size:12.5px; text-decoration:none; font-weight:600;}
+  .homeLink{display:inline-block; font-size:12.5px; color:var(--muted); text-decoration:none; margin-bottom:10px;}
+  .homeLink:hover{color:var(--primary);}
   .waCheckList{margin-bottom:10px;}
   .waCheckRow{display:flex; align-items:center; gap:8px; padding:6px 0; cursor:pointer; font-size:13.5px; color:var(--ink);}
   .waCheckRow input{width:auto;}
@@ -66,6 +68,7 @@
 </head>
 <body>
 <div class="wrap">
+  <a href="index.html" class="homeLink">← <span data-i18n="navHome">Home</span></a>
   <header>
     <div>
       <h1 data-i18n="title">بلاغ صيانة</h1>
@@ -124,7 +127,7 @@ const PHOTOS_BUCKET = "maintenance-photos";
 
 const I18N = {
   ar: {
-    title:"بلاغ صيانة", selectBranch:"اختر الفرع", selectBranchOpt:"اختر الفرع...",
+    title:"بلاغ صيانة", navHome:"الرئيسية", selectBranch:"اختر الفرع", selectBranchOpt:"اختر الفرع...",
     branchPassword:"كلمة مرور الفرع", password:"كلمة المرور", continue:"متابعة",
     forgotPassword:"نسيت كلمة المرور؟", branchLabel:"الفرع: ", changeBranch:"تغيير الفرع",
     changeBranchPassword:"تغيير كلمة مرور الفرع", newPassword:"كلمة المرور الجديدة",
@@ -147,7 +150,7 @@ const I18N = {
     langBtn:"English"
   },
   en: {
-    title:"Maintenance Report", selectBranch:"Select Branch", selectBranchOpt:"Select branch...",
+    title:"Maintenance Report", navHome:"Home", selectBranch:"Select Branch", selectBranchOpt:"Select branch...",
     branchPassword:"Branch Password", password:"Password", continue:"Continue",
     forgotPassword:"Forgot password?", branchLabel:"Branch: ", changeBranch:"Change branch",
     changeBranchPassword:"Change branch password", newPassword:"New Password",

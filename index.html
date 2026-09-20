@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance System</title>
+<style>
+  :root{
+    --bg:#F5F2EC; --surface:#FFFFFF; --ink:#211E1A; --muted:#7A7268; --line:#E4DFD5;
+    --primary:#2C4A3E; --primary-ink:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; min-height:100vh;}
+  .wrap{max-width:520px; margin:0 auto; padding:40px 18px 60px;}
+  header{text-align:center; margin-bottom:32px;}
+  header h1{font-size:22px; margin:0 0 6px;}
+  header .brand{font-size:13px; color:var(--muted);}
+  .card{
+    display:block; background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:20px; margin-bottom:14px; text-decoration:none; color:var(--ink);
+  }
+  .card:hover{border-color:var(--primary);}
+  .card .name{font-size:16px; font-weight:700; margin-bottom:4px;}
+  .card .desc{font-size:13px; color:var(--muted); line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Maintenance System</h1>
+    <span class="brand">Fareeq Bin Aqool / Just Buns</span>
+  </header>
+
+  <a class="card" href="maintenance-report.html">
+    <div class="name">Branch Report</div>
+    <div class="desc">Branch staff submit a maintenance issue with photos or video.</div>
+  </a>
+
+  <a class="card" href="maintenance-team.html">
+    <div class="name">Maintenance Team</div>
+    <div class="desc">View open tickets, claim them, update status, add notes.</div>
+  </a>
+
+  <a class="card" href="maintenance-supervisor.html">
+    <div class="name">Maintenance Supervisor</div>
+    <div class="desc">Manage tickets plus view stats, cost totals, and branch breakdown.</div>
+  </a>
+
+  <a class="card" href="maintenance-admin.html">
+    <div class="name">Admin Dashboard</div>
+    <div class="desc">Full report table, settings, WhatsApp numbers, passwords.</div>
+  </a>
+</div>
+</body>
+</html>
