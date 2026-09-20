@@ -92,6 +92,7 @@
   </div>
 
   <div id="mainArea" class="hidden" style="display:none;">
+    <div id="statusMsg" style="font-size:13px; color:var(--muted); margin-bottom:10px;"></div>
     <div class="stats" id="statsRow"></div>
     <div class="card">
       <div class="section-title" data-i18n="byBranch">حسب الفرع (مفتوح + قيد التنفيذ)</div>
@@ -234,27 +235,38 @@ document.getElementById("enterBtn").addEventListener("click", async ()=>{
   const name = document.getElementById("staffName").value.trim();
   const pass = document.getElementById("teamPass").value;
   const msgEl = document.getElementById("loginMsg");
-  msgEl.textContent = "";
-  if(!name){ msgEl.textContent = t("enterName"); return; }
+  msgEl.className = "msg";
+  msgEl.style.color = "";
+  if(!name){ msgEl.className = "msg err"; msgEl.textContent = t("enterName"); return; }
+  msgEl.textContent = "Step 1: checking password...";
   try{
     const rows = await sb("admin_settings?select=supervisor_password&limit=1");
     if(rows.length === 0 || rows[0].supervisor_password !== pass){
+      msgEl.className = "msg err";
       msgEl.textContent = t("wrongPassword");
       return;
     }
   }catch(e){
-    msgEl.textContent = t("genericError");
+    msgEl.className = "msg err";
+    msgEl.textContent = "Step 1 FAILED: " + e.message;
     return;
   }
+  msgEl.textContent = "Step 2: password OK, loading page...";
   staffName = name;
   document.getElementById("loginCard").style.display = "none";
   document.getElementById("mainArea").style.display = "block";
+  const statusEl = document.getElementById("statusMsg");
   try{
+    statusEl.textContent = "Step 3: loading branches...";
     await loadBranches();
+    statusEl.textContent = "Step 4: loading tickets...";
     await loadTickets();
+    statusEl.textContent = "Step 5: loading stats...";
     await loadReportStats();
+    statusEl.textContent = "";
   }catch(e){
-    document.getElementById("ticketList").innerHTML = `<div class="empty">${t("loadFail")}</div>`;
+    statusEl.textContent = "";
+    document.getElementById("ticketList").innerHTML = `<div class="empty">${t("loadFail")}: ${e.message}</div>`;
   }
 });
 
