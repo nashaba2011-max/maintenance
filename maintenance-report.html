@@ -71,6 +71,10 @@
 </head>
 <body>
 <div class="wrap">
+  <a href="#" id="adminHomeLink" class="homeLink">
+    <svg class="homeIcon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 11.5L12 4l9 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span data-i18n="navHome">Home</span>
+  </a>
   <header>
     <div>
       <h1 data-i18n="title">بلاغ صيانة</h1>
@@ -478,6 +482,22 @@ function enableEnterNav(containerId, buttonId){
 }
 enableEnterNav("branchCard", "continueBtn");
 enableEnterNav("reportCard", "submitBtn");
+
+document.getElementById("adminHomeLink").addEventListener("click", async (e)=>{
+  e.preventDefault();
+  const pass = prompt("Admin password:");
+  if(pass === null) return;
+  try{
+    const rows = await sb("admin_settings?select=admin_password&limit=1");
+    if(rows.length && rows[0].admin_password === pass){
+      window.location.href = "maintenance-admin.html";
+    }else{
+      alert("Incorrect password.");
+    }
+  }catch(err){
+    alert("Something went wrong.");
+  }
+});
 
 applyLanguage();
 init();
