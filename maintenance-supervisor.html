@@ -44,6 +44,10 @@
   .mediaThumb{position:relative; width:64px; height:64px; border-radius:8px; overflow:hidden; border:1px solid var(--line); display:block;}
   .mediaThumb img, .mediaThumb video{width:100%; height:100%; object-fit:cover; display:block;}
   .mediaThumb .playBadge{position:absolute; bottom:2px; inset-inline-end:2px; background:rgba(33,30,26,.75); color:#fff; font-size:10px; padding:1px 4px; border-radius:5px;}
+  .mediaThumbWrap{position:relative; display:inline-flex; flex-direction:column; align-items:center; gap:3px;}
+  .mediaDlBtn{width:64px; padding:2px 0; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--muted); font-size:11px; cursor:pointer;}
+  .mediaDlBtn:hover{color:var(--primary); border-color:var(--primary);}
+  .downloadAllBtn{display:block; margin-top:6px; font-size:12px; padding:6px 12px;}
   .ticket-meta{font-size:12px; color:var(--muted); margin-bottom:10px;}
   .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
   .row select, .row button{flex:1; min-width:120px;}
@@ -163,6 +167,7 @@ const I18N = {
     cost:"تكلفة الصيانة (د.ب)", saveDetails:"حفظ التفاصيل", saved:"تم الحفظ.", saveFail:"تعذر الحفظ.",
     addCompletionMedia:"إضافة صور/فيديو إثبات الإنجاز", tapToAddMedia:"اضغط هنا لإضافة صور أو فيديو",
     uploadMedia:"رفع المرفقات", uploadingMedia:"جارِ الرفع", mediaUploaded:"تم رفع المرفقات بنجاح.",
+    downloadAll:"تحميل الكل", downloadingAll:"جارِ التحميل",
     notifyTeam:"إرسال إلى فريق الصيانة", recipient:"المستلم", sendViaWhatsapp:"إرسال عبر واتساب",
     notifyTicketMsg:(num,branch,cat,pri,desc)=>`يرجى مباشرة بلاغ الصيانة #${num}\nالفرع: ${branch}\nنوع المشكلة: ${cat}\nالأولوية: ${pri}\nالوصف: ${desc}`,
     saving:"جارِ الحفظ...", enterName:"الرجاء كتابة اسمك.", wrongPassword:"كلمة المرور غير صحيحة.",
@@ -190,6 +195,7 @@ const I18N = {
     cost:"Maintenance cost (BHD)", saveDetails:"Save Details", saved:"Saved.", saveFail:"Could not save.",
     addCompletionMedia:"Add completion proof photos/video", tapToAddMedia:"Tap here to add photos or video",
     uploadMedia:"Upload Attachments", uploadingMedia:"Uploading", mediaUploaded:"Attachments uploaded successfully.",
+    downloadAll:"Download All", downloadingAll:"Downloading",
     notifyTeam:"Send to Maintenance Team", recipient:"Recipient", sendViaWhatsapp:"Send via WhatsApp",
     notifyTicketMsg:(num,branch,cat,pri,desc)=>`Please attend to maintenance ticket #${num}\nBranch: ${branch}\nProblem type: ${cat}\nPriority: ${pri}\nDescription: ${desc}`,
     saving:"Saving...", enterName:"Please enter your name.", wrongPassword:"Incorrect password.",
@@ -644,13 +650,54 @@ async function loadMedia(ticketId, el){
   try{
     const photos = await sb(`ticket_photos?ticket_id=eq.${ticketId}&select=*&order=created_at.asc`);
     if(photos.length === 0) return;
-    el.innerHTML = photos.map(p=>{
+    el.innerHTML = photos.map((p,idx)=>{
       const isVideo = /\.(mp4|mov|webm|m4v|avi)$/i.test(p.url);
-      return isVideo
-        ? `<a href="${p.url}" target="_blank" class="mediaThumb"><video src="${p.url}" muted onerror="this.closest('a').style.display='none'"></video><span class="playBadge">▶</span></a>`
-        : `<a href="${p.url}" target="_blank" class="mediaThumb"><img src="${p.url}" onerror="this.closest('a').style.display='none'"></a>`;
-    }).join("");
+      const media = isVideo
+        ? `<video src="${p.url}" muted onerror="this.closest('.mediaThumbWrap').style.display='none'"></video><span class="playBadge">▶</span>`
+        : `<img src="${p.url}" onerror="this.closest('.mediaThumbWrap').style.display='none'">`;
+      return `<span class="mediaThumbWrap">
+        <a href="${p.url}" target="_blank" class="mediaThumb">${media}</a>
+        <button type="button" class="mediaDlBtn" data-url="${p.url}" data-name="media-${idx+1}" title="Download">⬇</button>
+      </span>`;
+    }).join("") + (photos.length > 1 ? `<button type="button" class="downloadAllBtn ghost">${t("downloadAll")}</button>` : "");
+
+    el.querySelectorAll(".mediaDlBtn").forEach(btn=>{
+      btn.addEventListener("click", async (e)=>{
+        e.preventDefault();
+        await downloadFile(btn.dataset.url, btn.dataset.name);
+      });
+    });
+    const downloadAllBtn = el.querySelector(".downloadAllBtn");
+    if(downloadAllBtn){
+      downloadAllBtn.addEventListener("click", async ()=>{
+        downloadAllBtn.disabled = true;
+        for(let i=0; i<photos.length; i++){
+          downloadAllBtn.textContent = `${t("downloadingAll")} (${i+1}/${photos.length})...`;
+          await downloadFile(photos[i].url, `media-${i+1}`);
+        }
+        downloadAllBtn.disabled = false;
+        downloadAllBtn.textContent = t("downloadAll");
+      });
+    }
   }catch(e){}
+}
+
+async function downloadFile(url, name){
+  try{
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const ext = (url.split(".").pop() || "").split("?")[0];
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = `${name}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=> URL.revokeObjectURL(blobUrl), 5000);
+  }catch(e){
+    window.open(url, "_blank");
+  }
 }
 
 async function loadNotes(ticketId, el){
