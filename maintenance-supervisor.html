@@ -62,6 +62,17 @@
   .detailsRow b{color:var(--ink);}
   .detailsBox label{display:block; font-size:11.5px; color:var(--muted); margin:8px 0 4px;}
   .detailsBox input{width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:7px; font-size:13px; background:#FCFBF9; color:var(--ink); font-family:inherit;}
+  .photoDropSm{border:2px dashed var(--line); border-radius:8px; padding:12px; text-align:center; cursor:pointer; color:var(--muted); font-size:12.5px; background:#FCFBF9;}
+  .photoDropSm:hover{border-color:var(--primary);}
+  .thumbsSm{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .thumbSm{position:relative; width:56px; height:56px; border-radius:7px; overflow:hidden; border:1px solid var(--line);}
+  .thumbSm img, .thumbSm video{width:100%; height:100%; object-fit:cover; display:block;}
+  .thumbSm .rmSm{position:absolute; top:1px; inset-inline-start:1px; background:rgba(33,30,26,.75); color:#fff; border:none; border-radius:100px; width:16px; height:16px; font-size:10px; line-height:1; cursor:pointer; padding:0;}
+  .notifyRow{margin-top:8px;}
+  .notifyRow .ghost{background:#25D366; color:#fff; border:1px solid #25D366;}
+  .waCheckList{margin-top:8px;}
+  .waCheckRow{display:flex; align-items:center; gap:8px; padding:5px 0; cursor:pointer; font-size:13px; color:var(--ink);}
+  .waCheckRow input{width:auto;}
   .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:18px;}
   .stat{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px;}
   .stat .num{font-size:26px; font-weight:800; line-height:1;}
@@ -141,6 +152,10 @@ const I18N = {
     performedBy:"الجهة المنفّذة (من قام بالعمل)", performedByPh:"مثال: فني داخلي / مقاول خارجي",
     approvedBy:"من أعطى الموافقة", approvedByPh:"مثال: صاحب العمل",
     cost:"تكلفة الصيانة (د.ب)", saveDetails:"حفظ التفاصيل", saved:"تم الحفظ.", saveFail:"تعذر الحفظ.",
+    addCompletionMedia:"إضافة صور/فيديو إثبات الإنجاز", tapToAddMedia:"اضغط هنا لإضافة صور أو فيديو",
+    uploadMedia:"رفع المرفقات", uploadingMedia:"جارِ الرفع", mediaUploaded:"تم رفع المرفقات بنجاح.",
+    notifyTeam:"إرسال إلى فريق الصيانة", recipient:"المستلم", sendViaWhatsapp:"إرسال عبر واتساب",
+    notifyTicketMsg:(num,branch,cat,pri,desc)=>`يرجى مباشرة بلاغ الصيانة #${num}\nالفرع: ${branch}\nنوع المشكلة: ${cat}\nالأولوية: ${pri}\nالوصف: ${desc}`,
     saving:"جارِ الحفظ...", enterName:"الرجاء كتابة اسمك.", wrongPassword:"كلمة المرور غير صحيحة.",
     genericError:"حدث خطأ. حاول مرة أخرى.", noTeamNumber:"ما في رقم واتساب مسجّل لفريق الصيانة بعد.",
     forgotWhatsappMsg:"مرحباً، نسيت كلمة مرور مسؤول الصيانة. ممكن ترسلها لي؟",
@@ -164,6 +179,10 @@ const I18N = {
     performedBy:"Performed by", performedByPh:"e.g. In-house technician / external contractor",
     approvedBy:"Approved by", approvedByPh:"e.g. Owner",
     cost:"Maintenance cost (BHD)", saveDetails:"Save Details", saved:"Saved.", saveFail:"Could not save.",
+    addCompletionMedia:"Add completion proof photos/video", tapToAddMedia:"Tap here to add photos or video",
+    uploadMedia:"Upload Attachments", uploadingMedia:"Uploading", mediaUploaded:"Attachments uploaded successfully.",
+    notifyTeam:"Send to Maintenance Team", recipient:"Recipient", sendViaWhatsapp:"Send via WhatsApp",
+    notifyTicketMsg:(num,branch,cat,pri,desc)=>`Please attend to maintenance ticket #${num}\nBranch: ${branch}\nProblem type: ${cat}\nPriority: ${pri}\nDescription: ${desc}`,
     saving:"Saving...", enterName:"Please enter your name.", wrongPassword:"Incorrect password.",
     genericError:"Something went wrong. Please try again.", noTeamNumber:"No WhatsApp number is set for the maintenance team yet.",
     forgotWhatsappMsg:"Hi, I forgot the maintenance supervisor password. Could you send it to me?",
@@ -206,6 +225,59 @@ async function sb(path, opts={}){
   if(!res.ok){ throw new Error(await res.text()); }
   const text = await res.text();
   return text ? JSON.parse(text) : null;
+}
+
+const PHOTOS_BUCKET = "maintenance-photos";
+
+async function uploadPhoto(path, file){
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${PHOTOS_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": file.type || "application/octet-stream"
+    },
+    body: file
+  });
+  if(!res.ok){ throw new Error(await res.text()); }
+  return `${SUPABASE_URL}/storage/v1/object/public/${PHOTOS_BUCKET}/${path}`;
+}
+
+function escapeSlug(s){
+  return s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+}
+
+function buildFileName(originalName, isVideo){
+  const dotIdx = originalName.lastIndexOf(".");
+  const ext = isVideo
+    ? (dotIdx > 0 ? originalName.slice(dotIdx+1).toLowerCase().replace(/[^a-z0-9]/g,"") || "mp4" : "mp4")
+    : "jpg";
+  const base = dotIdx > 0 ? originalName.slice(0, dotIdx) : originalName;
+  return `${escapeSlug(base) || "file"}.${ext}`;
+}
+
+function compressImage(file, maxDim, quality){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = ()=>{
+      let { width, height } = img;
+      if(width > maxDim || height > maxDim){
+        if(width > height){ height = Math.round(height * (maxDim / width)); width = maxDim; }
+        else{ width = Math.round(width * (maxDim / height)); height = maxDim; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(objectUrl);
+      canvas.toBlob((blob)=>{
+        resolve(blob ? blob : file);
+      }, "image/jpeg", quality);
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(objectUrl); resolve(file); };
+    img.src = objectUrl;
+  });
 }
 
 let staffName = "";
@@ -344,6 +416,11 @@ async function renderTicket(tk){
         <button class="assignBtn">${tk.maintenance_staff?.name ? t("assignedTo") + escapeHtml(tk.maintenance_staff.name) : t("claimTicket")}</button>
       ` : `<span class="ticket-meta">${tk.maintenance_staff?.name ? t("closedBy") + escapeHtml(tk.maintenance_staff.name) : t("closedNoBy")}</span>`}
     </div>
+    ${tk.status !== "closed" ? `
+    <div class="notifyRow">
+      <button type="button" class="notifyTeamBtn ghost">${t("notifyTeam")}</button>
+      <div class="notifyBox"></div>
+    </div>` : ""}
     <div class="notes">
       <div class="notesList"></div>
       ${tk.status !== "closed" ? `
@@ -368,6 +445,12 @@ async function renderTicket(tk){
       <input type="number" step="0.001" class="costInput" value="${tk.cost ?? ""}" placeholder="0.000">
       <button type="button" class="saveDetailsBtn ghost" style="margin-top:10px;">${t("saveDetails")}</button>
       <div class="detailsMsg msg"></div>
+      <label>${t("addCompletionMedia")}</label>
+      <div class="photoDropSm">${t("tapToAddMedia")}</div>
+      <input type="file" class="photoInputSm" accept="image/*,video/*" multiple style="display:none;">
+      <div class="thumbsSm"></div>
+      <button type="button" class="uploadMediaBtn ghost" style="margin-top:8px;">${t("uploadMedia")}</button>
+      <div class="uploadMediaMsg msg"></div>
     </div>
   `;
 
@@ -387,6 +470,43 @@ async function renderTicket(tk){
       await sb(`maintenance_tickets?id=eq.${tk.id}`, { method:"PATCH", body: JSON.stringify(patch) });
       await loadTickets();
       await loadReportStats();
+    });
+  }
+
+  const notifyTeamBtn = div.querySelector(".notifyTeamBtn");
+  if(notifyTeamBtn){
+    notifyTeamBtn.addEventListener("click", async ()=>{
+      const box = div.querySelector(".notifyBox");
+      notifyTeamBtn.disabled = true;
+      try{
+        const settingsRows = await sb("admin_settings?select=team_whatsapp_numbers&limit=1");
+        const numbers = (settingsRows[0]?.team_whatsapp_numbers || "").split(",").map(s=>s.trim()).filter(Boolean);
+        const waText = encodeURIComponent(t("notifyTicketMsg")(tk.ticket_number, tk.branches?.name || "", catName || "", t(tk.priority), tk.description));
+        if(numbers.length === 0){
+          box.innerHTML = `<div class="msg err">${t("noTeamNumber")}</div>`;
+        }else if(numbers.length === 1){
+          window.open(`https://wa.me/${numbers[0]}?text=${waText}`, "_blank");
+        }else{
+          box.innerHTML = `<div class="waCheckList">` +
+            numbers.map((num,idx)=>`
+              <label class="waCheckRow">
+                <input type="checkbox" class="waNumCheckTk" value="${num}" checked>
+                <span>${t("recipient")} ${idx+1} (${num})</span>
+              </label>
+            `).join("") +
+            `</div><button type="button" class="waSendSelectedBtnTk ghost" style="margin-top:6px; background:#25D366; color:#fff;">${t("sendViaWhatsapp")}</button>`;
+          box.querySelector(".waSendSelectedBtnTk").addEventListener("click", ()=>{
+            const selected = Array.from(box.querySelectorAll(".waNumCheckTk:checked")).map(c=>c.value);
+            selected.forEach(num=>{
+              window.open(`https://wa.me/${num}?text=${waText}`, "_blank");
+            });
+          });
+        }
+      }catch(e){
+        box.innerHTML = `<div class="msg err">${t("genericError")}</div>`;
+      }finally{
+        notifyTeamBtn.disabled = false;
+      }
     });
   }
 
@@ -447,6 +567,64 @@ async function renderTicket(tk){
       msgEl.className = "msg err"; msgEl.textContent = t("saveFail");
     }finally{
       saveDetailsBtn.disabled = false; saveDetailsBtn.textContent = t("saveDetails");
+    }
+  });
+
+  let pendingFiles = [];
+  const photoDropSm = div.querySelector(".photoDropSm");
+  const photoInputSm = div.querySelector(".photoInputSm");
+  const thumbsSm = div.querySelector(".thumbsSm");
+
+  photoDropSm.addEventListener("click", ()=> photoInputSm.click());
+
+  function renderThumbsSm(){
+    thumbsSm.innerHTML = "";
+    pendingFiles.forEach((file, idx)=>{
+      const t2 = document.createElement("div");
+      t2.className = "thumbSm";
+      const isVideo = file.type.startsWith("video/");
+      const media = document.createElement(isVideo ? "video" : "img");
+      media.src = URL.createObjectURL(file);
+      if(isVideo) media.muted = true;
+      const rm = document.createElement("button");
+      rm.className = "rmSm"; rm.textContent = "×"; rm.type = "button";
+      rm.addEventListener("click", ()=>{ pendingFiles.splice(idx, 1); renderThumbsSm(); });
+      t2.appendChild(media); t2.appendChild(rm);
+      thumbsSm.appendChild(t2);
+    });
+  }
+
+  photoInputSm.addEventListener("change", (e)=>{
+    pendingFiles = pendingFiles.concat(Array.from(e.target.files));
+    renderThumbsSm();
+    e.target.value = "";
+  });
+
+  const uploadMediaBtn = div.querySelector(".uploadMediaBtn");
+  uploadMediaBtn.addEventListener("click", async ()=>{
+    const msgEl = div.querySelector(".uploadMediaMsg");
+    msgEl.className = "msg"; msgEl.textContent = "";
+    if(pendingFiles.length === 0){ return; }
+    uploadMediaBtn.disabled = true;
+    try{
+      for(let i=0; i<pendingFiles.length; i++){
+        const file = pendingFiles[i];
+        const isVideo = file.type.startsWith("video/");
+        uploadMediaBtn.textContent = `${t("uploadingMedia")} (${i+1}/${pendingFiles.length})...`;
+        const uploadBlob = isVideo ? file : await compressImage(file, 1600, 0.75);
+        const fileName = buildFileName(file.name, isVideo);
+        const path = `${tk.id}/${Date.now()}-${i}-${fileName}`;
+        const url = await uploadPhoto(path, uploadBlob);
+        await sb("ticket_photos", { method:"POST", body: JSON.stringify({ ticket_id: tk.id, url }) });
+      }
+      msgEl.className = "msg ok"; msgEl.textContent = t("mediaUploaded");
+      pendingFiles = [];
+      renderThumbsSm();
+      loadMedia(tk.id, mediaEl);
+    }catch(e){
+      msgEl.className = "msg err"; msgEl.textContent = t("saveFail");
+    }finally{
+      uploadMediaBtn.disabled = false; uploadMediaBtn.textContent = t("uploadMedia");
     }
   });
 

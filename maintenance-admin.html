@@ -16,6 +16,9 @@
   header{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:10px;}
   header h1{font-size:21px; margin:0; font-weight:700;}
   header .brand{font-size:13px; color:var(--muted);}
+  .pageNav{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px;}
+  .pageNav a{padding:7px 14px; border-radius:100px; border:1px solid var(--line); background:var(--surface); color:var(--ink); text-decoration:none; font-size:13px; font-weight:600;}
+  .pageNav a.active{background:var(--primary); color:var(--primary-ink); border-color:var(--primary);}
   #langToggle{width:auto; margin:0; padding:6px 12px; font-size:12.5px; font-weight:700; background:var(--surface); color:var(--primary); border:1px solid var(--primary); border-radius:100px; cursor:pointer;}
   .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:18px;}
   .stat{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px;}
@@ -65,6 +68,13 @@
       <span class="brand">Fareeq Bin Aqool / Just Buns</span>
     </div>
   </header>
+
+  <nav class="pageNav">
+    <a href="maintenance-report.html" data-i18n="navReport">بلاغ الفروع</a>
+    <a href="maintenance-team.html" data-i18n="navTeam">فريق الصيانة</a>
+    <a href="maintenance-supervisor.html" data-i18n="navSupervisor">مسؤول الصيانة</a>
+    <a href="maintenance-admin.html" class="active" data-i18n="navAdmin">لوحة الإدارة</a>
+  </nav>
 
   <div id="mainArea">
     <div class="stats" id="statsRow"></div>
@@ -150,6 +160,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const I18N = {
   ar: {
     title:"لوحة إدارة الصيانة", adminPassword:"كلمة مرور الإدارة", password:"كلمة المرور", enter:"دخول",
+    navReport:"بلاغ الفروع", navTeam:"فريق الصيانة", navSupervisor:"مسؤول الصيانة", navAdmin:"لوحة الإدارة",
     forgotPassword:"نسيت كلمة المرور؟", byBranch:"حسب الفرع (مفتوح + قيد التنفيذ)",
     status:"الحالة", all:"الكل", open:"مفتوح", in_progress:"قيد التنفيذ", closed:"مقفل",
     branch:"الفرع", allBranches:"كل الفروع", category:"التصنيف", allCategories:"كل التصنيفات",
@@ -176,6 +187,7 @@ const I18N = {
   },
   en: {
     title:"Maintenance Admin Dashboard", adminPassword:"Admin Password", password:"Password", enter:"Enter",
+    navReport:"Branch Report", navTeam:"Maintenance Team", navSupervisor:"Maintenance Supervisor", navAdmin:"Admin Dashboard",
     forgotPassword:"Forgot password?", byBranch:"By Branch (Open + In Progress)",
     status:"Status", all:"All", open:"Open", in_progress:"In Progress", closed:"Closed",
     branch:"Branch", allBranches:"All branches", category:"Category", allCategories:"All categories",
