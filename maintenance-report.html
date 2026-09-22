@@ -430,7 +430,10 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
 
     try{
       const settingsRows = await sb("admin_settings?select=team_whatsapp_numbers&limit=1");
-      const numbers = (settingsRows[0]?.team_whatsapp_numbers || "").split(",").map(s=>s.trim()).filter(Boolean);
+      const teamNumbers = (settingsRows[0]?.team_whatsapp_numbers || "").split(",").map(s=>s.trim()).filter(Boolean);
+      const branchRows = await sb(`branches?id=eq.${currentBranch.id}&select=manager_whatsapp`);
+      const branchNumbers = (branchRows[0]?.manager_whatsapp || "").split(",").map(s=>s.trim()).filter(Boolean);
+      const numbers = Array.from(new Set([...branchNumbers, ...teamNumbers]));
       if(numbers.length){
         const priorityLabel = t(priority);
         const waText = encodeURIComponent(t("newTicketMsg")(ticket.ticket_number, currentBranch.name, catName, priorityLabel, desc));
